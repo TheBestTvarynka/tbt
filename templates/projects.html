@@ -1,0 +1,30 @@
+{# This Page Shows the Posts Grouped by Year: example.com/posts/ #}
+
+{% extends "base.html" %}
+
+{%- block seo %}
+  {{- super() }}
+  {%- set title = "Projects" %}
+
+  {%- if config.title %}
+    {%- set title_addition = title_separator ~ config.title %}
+  {%- else %}
+    {%- set title_addition = "" %}
+  {%- endif %}
+
+  {%- set description = config.description %}
+
+  {{- macros_head::seo(config=config, title=title, title_addition=title_addition, description=description, is_home=true) }}
+{%- endblock seo %}
+
+{%- block content %}
+{%- set section_item = get_section(path="_index.md") %}
+    <div>
+      {%- for year, projects in section_item.pages | group_by(attribute="year") %}
+      <h2>{{ year }}</h2>
+      {%- for project in projects %}
+      <p><a href="{{ project.permalink | safe }}">{{ project.title }}</a> - <time datetime="{{ project.date }}">{{ project.date | date(format="%F") }}</time></p>
+      {%- endfor %}
+      {%- endfor %}
+    </div>
+{%- endblock content %}

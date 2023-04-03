@@ -99,9 +99,6 @@
           {%- if page.taxonomies.tags %} {%- for tag in page.taxonomies.tags %} #<a href="{{ get_taxonomy_url(kind='tags', name=tag) | safe }}{%- if config.extra.uglyurls %}index.html{%- endif %}">{{ tag }}</a> {% endfor -%}{%- endif %}</span>
 {%- endmacro meta_index %}
 
-
-
-
 {%- macro footer(page) %}
 {%- if page.reading_time %}
 {%- if page.reading_time > 2 %}
@@ -109,7 +106,6 @@
 {%- endif %}
 {%- endif %}
 {%- endmacro footer %}
-
 
 {%- macro pagination(paginator, config)%}
   {%- if paginator.number_pagers > 1 %}
