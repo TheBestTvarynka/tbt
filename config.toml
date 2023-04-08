@@ -1,7 +1,7 @@
 # do NOT include a trailing slash on the base URL for web urls
-base_url = "https://abridge.netlify.app"
+base_url = "https://tbt.qkation.com"
 #base_url = "/home/jieiku/.dev/abridge/public/" # for locally usable build directly from disk, also set in [extra] section uglyurls = true
-title = "Abridge"
+title = "TheBestTvarynka"
 description = "Abridge is a fast and lightweight Zola theme using semantic html, abridge.css class-light CSS, and No Mandatory JS."
 default_language = "en"
 output_dir = "public"
@@ -30,7 +30,7 @@ include_content = true      # include rendered content of page/section in index
 highlight_code = true
 highlight_theme = "css"
 
-render_emoji = false
+render_emoji = true
 external_links_target_blank = true # rel="noopener"
 external_links_no_follow = false   # rel="nofollow"
 external_links_no_referrer = false # rel="noreferrer"
@@ -60,7 +60,7 @@ footer_credit = true
 #uncomment one of the two lines, or neither, depending on which type of logo you want to use:
 #logo = { file="logo.svg", width="32", height="32", alt="Abridge", text="bridge" }
 #textlogo = '<font color="#f90">A</font>bridge'
-textlogo = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#f90" viewBox="0 0 96 96" width="32" height="32"><path stroke-width="14" d="M14 99 46 7h4l32 92"/><path stroke-width="9" d="M-3 82c43-26 59-26 102 0"/><path stroke-linecap="round" stroke-width="1.5" d="M94 72v7m-5-9.8v7m-5-9.8v7.1M79 64v7M63 57.7v7m-5-8.2v7m-5-7.8v7m-5-7.2v7m-5-6.7v7m-5-6.3v7m-5-5.8v7M17 64v7m-5-4.6v7m-5-4.2v7M2 72v7"/></svg>bridge'
+textlogo = 'TheBestTvarynka'
 
 sitedesc = false # enables or disables the display of the site description below the logo.
 #copyright_start_year = 2019  # optional
@@ -195,7 +195,6 @@ seo = true  # enable or disable seo-related meta tags: opengraph, facebook, twit
 
 # Footer social links; full options listed in macros/social.html
 [extra.social]
-feed = true
 mail_encode = true # This obfuscates your email address, javascript is used to decode it at page load.
 mail = "the.best.tvarynka@gmail.com"
 twitter = "TheBestTvarynka"

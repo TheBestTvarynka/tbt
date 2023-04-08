@@ -5,17 +5,13 @@ template = "pages.html"
 draft = false
 +++
 
-This site provides a demo for the [abridge theme](https://github.com/Jieiku/abridge) for [Zola](https://www.getzola.org/) the static site generator.
+This is my blog. Here I usually post some learning materials, guides/tips, and thoughts about something.
 
-Abridge was created by [Jake G (jieiku)](https://github.com/Jieiku) to be fast and lightweight, using semantic html, a class-light [abridge.css](https://github.com/Jieiku/abridge.css), and No Mandatory JS.
+I am Pavlo Myroniuk 👨‍💻, a software developer from Ukraine 🇺🇦. Loves Rust 🦀 and open-source software.
 
-Some fun facts about the theme:
+* 💻 I force electrons to do the math 💪
+* 🦀 Let's rewrite all in Rust 🥺
+* 💚 Workout is a very important part of my daily routine 🏃‍♂️
+* 📔 If you have any questions, notes, ideas, feel free to contact me 💬
 
-* Perfect score on Google's Lighthouse audit
-* Only ~6 KB of CSS before enabling the SVG CSS icons and syntax highlighting.
-* No mandatory JavaScript.
-* Now with SEO!
-
-Nearly half of the existing Zola MIT themes were inspiration for features and design of this theme.
-
-Both the theme and this site are licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This site are licensed under the [MIT license](https://opensource.org/licenses/MIT).
