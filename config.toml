@@ -135,9 +135,9 @@ favicon_ms_color = "#333333"
 favicon_webmanifest = "site.webmanifest" # Used for android-chrome-512x512.png and android-chrome-192x192.png
 favicon_mask = "safari-pinned-tab.svg" # safari-pinned-tab.svg
 favicon_mask_color = "#ff9900"
-favicon180 = "apple-touch-icon.png" # apple-touch-icon.png
-favicon32 = "favicon-32x32.png" # favicon-32x32.png
-favicon16 = "favicon-16x16.png" # favicon-16x16.png
+favicon180 = "profile-picture-180.svg" # apple-touch-icon.png
+favicon32 = "profile-picture-32.svg" # favicon-32x32.png
+favicon16 = "profile-picture-16.svg" # favicon-16x16.png
 
 icon_search = "svgs search" # Search button in search box.
 icon_adjust = "svgs adjust" # Theme Switcher button in top menu. (add class svgh to change colors on hover)
