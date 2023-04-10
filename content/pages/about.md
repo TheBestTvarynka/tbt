@@ -12,7 +12,7 @@ I didn't set a purpose to tell you everything I know. My motivation is to tell a
 
 If you enjoy my articles and consider them useful, then just follow me on [GitHub](https://github.com/TheBestTvarynka) and star the corresponding repo.
 
-* 💻 I force electrons to do the math 💪
+* 💻 [I force electrons to do the math](https://www.reddit.com/r/ProgrammerHumor/comments/jf95z8/the_best_ways_to_describe_the_job) 💪
 * 🦀 Let's rewrite all in Rust 🥺
 * 💚 Workout is a very important part of my daily routine 🏃‍♂️
 * 📔 If you have any questions, notes, ideas, feel free to contact me 💬

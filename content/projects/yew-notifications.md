@@ -107,4 +107,4 @@ See the [`examples`](https://github.com/TheBestTvarynka/yew-notifications/tree/m
 
 ### Moving forward
 
-At this point, this library has minimal functionality implemented. I plan to improve it continuously according to my needs. If you have any feature requests, then create an [issue](https://github.com/TheBestTvarynka/yew-notifications/issues/new) with the description. It'll be a priority for me.
+At this point, this library has minimal functionality implemented. I plan to improve it continuously according to my needs and goals. If you have any feature requests, then create an [issue](https://github.com/TheBestTvarynka/yew-notifications/issues/new) with the description. It'll be a priority for me.
