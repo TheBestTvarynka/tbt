@@ -1,10 +1,12 @@
 +++
 title = "crypto-helper"
+description = "Web app that can hash/encrypt/sign the data. JWT debugger."
 date = 2023-04-09
 draft = false
 
 [taxonomies]
 tags = ["yew", "rust", "tools"]
+
 [extra]
 toc = true
 keywords = "Rust, Yew, Crypto, JWT, Encrypt, Decrypt, Hash, HMAC, MAC, RSA"

@@ -1,5 +1,6 @@
 +++
 title = "yew-notifications"
+description = "Notifications components library for Yew. It's like react-toastify but for Yew."
 date = 2023-04-09
 draft = false
 
@@ -10,7 +11,7 @@ toc = true
 keywords = "Yew, Yew-components, Rust, Toaster"
 +++
 
-Notifications components library for [Yew](https://yew.rs/). It's like [react-toastify](https://www.npmjs.com/package/react-toastify) but for [yew](https://yew.rs/) and more simpler (so far :smirk:).
+Notifications components library for [Yew](https://yew.rs/). It's like [react-toastify](https://www.npmjs.com/package/react-toastify) but for [Yew](https://yew.rs/) and more simpler (so far :smirk:).
 
 TL;DR: [documentation](https://yn-docs.qkation.com/yew_notifications/index.html).
 

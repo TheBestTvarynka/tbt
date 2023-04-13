@@ -1,11 +1,14 @@
 +++
 title = "bytes-formatter"
+description = "Convert bytes between different representations (hex, dec, base64, etc)."
 date = 2023-04-09
 draft = false
 
 [taxonomies]
 tags = ["js", "tools"]
+
 [extra]
+keywords = "byte-formatter, utils, hex, tools"
 toc = true
 +++
 
