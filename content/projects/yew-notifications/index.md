@@ -1,7 +1,7 @@
 +++
 title = "yew-notifications"
 description = "Notifications components library for Yew. It's like react-toastify but for Yew."
-date = 2023-04-09
+date = 2023-04-17
 draft = false
 
 [taxonomies]
@@ -61,6 +61,12 @@ notifications.spawn(Notification::new(/* */));
 ```
 
 **Pay attention:** if you specify the different notification types in the provider and hook then the code will compile but fail in the runtime. But you can use different notification types if they provider components do not overlap.
+
+For example, with fully customized notifications, we can achieve the following result:
+
+{{ img(src="terminal_example.gif" alt="terminal example demo") }}
+
+<sub>[src](https://github.com/TheBestTvarynka/yew-notifications/tree/main/examples/terminal). [demo site](https://yn-docs.qkation.com/examples/terminal/index.html).</sub>
 
 ### How to use it
 

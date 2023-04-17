@@ -76,7 +76,7 @@ menu = [
 ]
 menu_footer = [
     {url = "/about/", name = "About", slash = true, blank = false},
-    {url = "/contact/", name = "Contact", slash = true, blank = false},
+    # {url = "/contact/", name = "Contact", slash = true, blank = false},
     {url = "/privacy/", name = "Privacy", slash = true, blank = false},
     {url = "/sitemap.xml", name = "Sitemap", slash = false, blank = true},
 ]

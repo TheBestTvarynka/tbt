@@ -59,7 +59,7 @@ Here is how my JWT debugger in action:
 
 ### Languages
 
-It's a fun story because I rewrote this tool two times. Firstly, I plan to make it very simple and start implementing using plain html/css/js (commit). Then I realized that it's hard to improve, maintain, and cause a lot of stupid bugs. The second choice was React. In the middle of the rewriting, I thought: why not write it in Rust?
+It's a fun story because I rewrote this tool two times. Firstly, I plan to make it very simple and start implementing using plain html/css/js. Then I realized that it's hard to improve, maintain, and cause a lot of stupid bugs. The second choice was React. In the middle of the rewriting, I thought: why not write it in Rust?
 
 After some research, I decided to use the [Yew](https://github.com/yewstack/yew) framework. Basically, it's like React but for Rust. From my experience, I can tell that *yew* is a great framework to write web applications (SPAs) in Rust. It works well, has great documentation, and is easy to work with. I faced only one problem: styling. We don't have (so far) such convenient libraries as we have for React.
 
