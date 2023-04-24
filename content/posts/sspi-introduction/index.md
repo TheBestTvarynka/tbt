@@ -7,7 +7,7 @@ draft = false
 tags = ["sspi", "windows", "winapi", "rust"]
 
 [extra]
-keywords = "SSPI, Windows"
+keywords = "SSPI, Windows, Rust, WinAPI"
 toc = true
 +++
 
@@ -140,7 +140,7 @@ Two things are needed to demonstrate SSPI in action:
 1. Client.
 2. Server.
 
-Both of them should use the same security package to successfully authenticate. As the client, I took [the NTLM security package](https://learn.microsoft.com/en-us/windows/win32/secauthn/microsoft-ntlm) from [the Microsoft-provided SSP](https://learn.microsoft.com/en-us/windows/win32/secauthn/ssp-packages-provided-by-microsoft). To keep my code example clearer, as the server, I took this [sspi implementation in Rust](https://crates.io/crates/sspi). All my code is written in Rust. To call Windows API functions I use crates with bindings like [winapi](https://crates.io/crates/winapi), [windows-sys](https://crates.io/crates/windows-sys).
+Both of them should use the same security package to successfully authenticate. As the client, I took [the NTLM security package](https://learn.microsoft.com/en-us/windows/win32/secauthn/microsoft-ntlm) from [the Microsoft-provided SSP](https://learn.microsoft.com/en-us/windows/win32/secauthn/ssp-packages-provided-by-microsoft). To keep my code example clearer, as the server, I took this [sspi implementation in Rust](https://crates.io/crates/sspi). All my code is written in Rust. To call Windows API functions I use crates with bindings like [winapi](https://crates.io/crates/winapi), [windows-sys](https://crates.io/crates/windows-sys). You should focus only on the client code and not on the server code.
 
 Why NTLM? Because it's simple. It's a good protocol to use as an example (but bad for the real world [[1]](https://www.calcomsoftware.com/ntlm-security-weaknesses/#relay) [[2]](https://www.securew2.com/blog/why-ntlm-authentication-is-vulnerable). If you can avoid it then avoid it :wolf:).
 
@@ -148,7 +148,89 @@ Why NTLM? Because it's simple. It's a good protocol to use as an example (but ba
 
 ### Initialization
 
+Good so far. Let the journey begin! What do we need to start using SSPI? Correct! SSPI function table. How can we initialize it?  By calling the `InitSecurityInterfaceW` function. This function returns a structure (see it [above](#overview)) with function pointers. If we want to use Windows SSP then we can just use Win API. But if we decide to use some custom SSP, then we need to load the corresponding dll, find the `InitSecurityInterfaceW` function and call it. Example:
+
+```Rust
+// load our SSP
+let sspi_handle = LoadLibraryW("my_cool_ssp.dll");
+// get the pointer to the needed function
+let init_security_interface_fn = GetProcAddress(sspi_handle, "InitSecurityInterfaceW");
+// transmute (cast) the pointer to the needed function type
+let init_security_interface_w_fn: INIT_SECURITY_INTERFACE_W = unsafe { std::mem::transmute(init_security_interface_w_fn) };
+let sspi_function_table = init_security_interface_w_fn();
+// now we have initialized function table
+// ...further authentication
+```
+
+But in the scope of this article, I use Windows native SSP. So I don't need to initialize the function table. It already is initialized inside Windows. Time to see what Windows can offer us:
+
+```Rust
+let mut number_of_packages = 0;
+let mut packages = null_mut();
+
+// Query information about the available Windows security packages
+// https://learn.microsoft.com/en-us/windows/win32/api/sspi/nf-sspi-enumeratesecuritypackagesw
+let result = EnumerateSecurityPackagesW(&mut number_of_packages, &mut packages);
+```
+
+When I printed it on the screen ([src](https://github.com/TheBestTvarynka/trash-code/blob/main/sspi-introduction/src/initialization.rs#L11)), I got such the output:
+
+```TXT
+14 packages
+ntlm
+....
+```
+
+We can see a lot of security packages. But as I said above, today we are working only with NTLM. Let's gather more information about the NTLM security package.
+
+```Rust
+todo!("QueryPackageInfoW function examples with descriptions");
+```
+
 ### Credentials
+
+Before starting the actual authentication we need to prepare credentials. In other words, to acquire credentials handle. Basically, the credentials handle is a pointer to some structure that contains prepared credentials for use during the authentication, maybe some flags, and other credentials-related information. What type of this structure? We don't know and we don't need to know. The security provider creates and works with this object. It'll be good if you also read [the official credentials handle definition](https://learn.microsoft.com/en-us/windows/win32/secauthn/acquirecredentialshandle--general). Enough talking. Now time back to the code ([src](https://github.com/TheBestTvarynka/trash-code/blob/main/sspi-introduction/src/credentials.rs#L12)).
+
+```Rust
+let mut credentials_handle = CredHandle::default();
+let mut expiry = TimeStamp::default();
+let mut package_name = str_to_win_wstring("NTLM");
+
+let mut domain = str_to_win_wstring("");
+let mut user = str_to_win_wstring("testuser");
+let mut password = str_to_win_wstring("test");
+
+let mut identity = SEC_WINNT_AUTH_IDENTITY_W {
+    User: user.as_mut_ptr(),
+    UserLength: 8,
+    Domain: domain.as_mut_ptr(),
+    DomainLength: 0,
+    Password: password.as_mut_ptr(),
+    PasswordLength: 4,
+    Flags: 0x2,
+};
+
+let status = AcquireCredentialsHandleW(
+    null_mut(),
+    package_name.as_mut_ptr(),
+    // SECPKG_CRED_OUTBOUND: https://learn.microsoft.com/en-us/windows/win32/secauthn/acquirecredentialshandle--ntlm
+    2,
+    null_mut(),
+    &mut identity as *mut SEC_WINNT_AUTH_IDENTITY_W as *mut _,
+    None,
+    null_mut(),
+    &mut credentials_handle as *mut _,
+    &mut expiry as *mut _,
+);
+```
+
+After the `AcquireCredentialsHandleW` function call, the `credentials_handle` variable will contain the credentials handle. **Note.** In SSPI all handles (context, credentials, etc) are instances of the [`SecHandle`](https://learn.microsoft.com/en-us/windows/win32/api/sspi/ns-sspi-sechandle) structure. Each such structure has two numbers (pointers): *lower* and *upper*. When you are working with SSPI you don't need to know anything more about them. If you are writing your own SSP then you shouldn't expose any information about them.
+
+However, to satisfy your curiosity, I will say what there may be (but don't tell anyone :stuck_out_tongue_winking_eye:): One of them can contain a pointer to some object (for example, a security context object), and another one can contain a pointer to the security package name. Because SSP can contain a lot of security packages, we need to store the security package name in some way that is currently used.
+
+```Rust
+todo!("query and set credentials attributes.");
+```
 
 ### Authentication
 
@@ -165,3 +247,4 @@ Why NTLM? Because it's simple. It's a good protocol to use as an example (but ba
 3. [`sspi.h`.](https://learn.microsoft.com/en-us/windows/win32/api/sspi/)
 4. [Authentication Functions.](https://learn.microsoft.com/en-us/windows/win32/secauthn/authentication-functions#sspi-functions)
 5. [Using SSPI.](https://learn.microsoft.com/en-us/windows/win32/secauthn/using-sspi)
+6. [Example source code.](https://github.com/TheBestTvarynka/trash-code/tree/main/sspi-introduction)
