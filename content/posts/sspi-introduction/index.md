@@ -175,17 +175,52 @@ let result = EnumerateSecurityPackagesW(&mut number_of_packages, &mut packages);
 
 When I printed it on the screen ([src](https://github.com/TheBestTvarynka/trash-code/blob/main/sspi-introduction/src/initialization.rs#L11)), I got such the output:
 
-```TXT
-14 packages
-ntlm
-....
+```txt
+Number of packages: 13
+-------------------------
+fCapabilities: 8928179
+wVersion: 1
+wRPCID: 9
+cbMaxToken: 48256
+Name: Negotiate
+Comment: Microsoft Package Negotiator
+-------------------------
+...
 ```
 
-We can see a lot of security packages. But as I said above, today we are working only with NTLM. Let's gather more information about the NTLM security package.
+We can see a lot of security packages. But as I said above, today we are working only with NTLM. Let's gather more information about the NTLM security package ([src](https://github.com/TheBestTvarynka/trash-code/blob/main/sspi-introduction/src/initialization.rs#L54)):
 
 ```Rust
-todo!("QueryPackageInfoW function examples with descriptions");
+let mut raw_package_name = str_to_win_wstring("NTLM");
+let mut package_info = null_mut();
+
+let status = QuerySecurityPackageInfoW(raw_package_name.as_mut_ptr(), &mut package_info);
+
+println!("{} package info:", package_name);
+println!("fCapabilities: {}", (*package_info).fCapabilities);
+println!("wVersion: {}", (*package_info).wVersion);
+println!("wRPCID: {}", (*package_info).wRPCID);
+println!("cbMaxToken: {}", (*package_info).cbMaxToken);
+println!("Name: {}", c_wide_string_to_rs_string((*package_info).Name));
+println!(
+    "Comment: {}",
+    c_wide_string_to_rs_string((*package_info).Comment)
+);
 ```
+
+Output:
+
+```txt
+NTLM package info:
+fCapabilities: 42478391
+wVersion: 1
+wRPCID: 10
+cbMaxToken: 2888
+Name: NTLM
+Comment: NTLM Security Package
+```
+
+In general, different security packages support different attributes. So refer to the documentation for more concrete information.
 
 ### Credentials
 
@@ -230,8 +265,26 @@ However, to satisfy your curiosity, I will say what there may be (but don't tell
 
 This function has a lot of parameters and they are well explained in [the official documentation](https://learn.microsoft.com/en-us/windows/win32/secauthn/acquirecredentialshandle--general). Just don't forget that the type for the `pauthdata` pointer is package-specific. It means that different security packages usually require different types of `pauthdata`.
 
+Also, the SSPI has a place for customization. Security packages implement the `QueryCredentialsAttributesW` and `SetCredentialsAttributesW` functions. With them, we can add and get additional information (attributes) about concrete credentials handle. Small example ([src](https://github.com/TheBestTvarynka/trash-code/blob/main/sspi-introduction/src/credentials.rs#L74)):
+
 ```Rust
-todo!("query and set credentials attributes.");
+let mut credentials_name = SecPkgCredentials_NamesW::default();
+let status = QueryCredentialsAttributesW(
+    client_credentials_handle,
+    SECPKG_CRED_ATTR_NAMES,
+    &mut credentials_name as *mut SecPkgCredentials_NamesW as *mut _,
+);
+
+println!(
+    "Credentials name: {:?}",
+    c_wide_string_to_rs_string(credentials_name.sUserName)
+);
+```
+
+Output:
+
+```txt
+Credentials name: "testdomain\\testuser"
 ```
 
 ### Authentication
@@ -289,11 +342,35 @@ Docs. Search for it in the documentation of the corresponding security package. 
 * `pfcontextattr`: flags that describe established security context. We use `fcontextreq` to specify some options for authentication. Ans use `pfcontextattr` to see what options have been established (set).
 * `ptsexpiry`: the expiration time of the context.
 
-Phew, the hardest part is gone. Now we (*finally*) have the established security context. What's next? Now we can do everything we want, but more importantly, we can safely transfer any messages to the server and receive server messages securely.
+The security context also has functions for setting and getting different attributes: `QueryContextAttributesW` and `SetContextAttributesW`. They have similar behavior to the credentials-related functions. For example, in the NTLM security package, we have the possibility to extract the established session key ([src](https://github.com/TheBestTvarynka/trash-code/blob/main/sspi-introduction/src/authentication.rs#L155)):
 
-```rust
-todo!("tell about the get context attributes function")
+```Rust
+let mut session_key = SecPkgContext_SessionKey::default();
+
+let status = QueryContextAttributesW(
+    client_security_context,
+    SECPKG_ATTR_SESSION_KEY,
+    &mut session_key as *mut SecPkgContext_SessionKey as *mut _,
+);
+
+println!(
+    "Established session key: {:?}",
+    from_raw_parts(
+        session_key.SessionKey as *const u8,
+        session_key.SessionKeyLength as usize
+    )
+);
 ```
+
+Output:
+
+```txt
+Established session key: [96, 1, 13, 58, 82, 191, 222, 134, 149, 184, 3, 75, 254, 126, 225, 74]
+```
+
+You can run the code a few times. Each time you will have another session key.
+
+Phew, the hardest part is gone. Now we (*finally*) have the established security context. What's next? Now we can do everything we want, but more importantly, we can safely transfer any messages to the server and receive server messages securely.
 
 ### Communication
 
@@ -316,7 +393,7 @@ The same thing with the `MakeSignature` and `VerifySignature` functions.
 
 ### Clean up
 
-Yes, memory leaks are memory safe, but it's better to not forget to clean up everything. SSPI has two main functions for that:
+Yes, *memory leaks are memory safe*, but it's better to not forget to clean up everything. SSPI has three functions for that:
 
 * `FreeContextBuffer`. ([doc](https://learn.microsoft.com/en-us/windows/win32/api/sspi/nf-sspi-freecontextbuffer)). Only one rule: if the buffer was allocated by the security package, then you should free it using this function. If the buffer was allocated by yourself, then you should free it in the usual way.
 * `FreeCredentialsHandle`. ([doc](https://learn.microsoft.com/en-us/windows/win32/api/sspi/nf-sspi-freecredentialshandle)).
