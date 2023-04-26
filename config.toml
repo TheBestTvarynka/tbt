@@ -2,7 +2,7 @@
 base_url = "https://tbt.qkation.com"
 #base_url = "/home/jieiku/.dev/abridge/public/" # for locally usable build directly from disk, also set in [extra] section uglyurls = true
 title = "TheBestTvarynka"
-description = "Abridge is a fast and lightweight Zola theme using semantic html, abridge.css class-light CSS, and No Mandatory JS."
+description = "Just my personal blog with interesting articles, thoughts, maybe guides/tips"
 default_language = "en"
 output_dir = "public"
 compile_sass = true
@@ -42,7 +42,7 @@ language_code = "en-US"
 title_separator = "|"  # Separator between title and title_addition, set as |, -, _, etc
 # To disable title_addition but keep built in page additions eg, Posts page: "Posts | Abridge" set title_addition to an empty string
 # To always set the page title exactly eg "Abridge" then comment out the below line (not recommend, bad for SEO)
-title_addition = "Fast & Lightweight Zola Theme" # a default value for title addition
+title_addition = "TheBestTvarynka" # a default value for title addition
 recent = true # TOC / index
 recent_items = 9
 author = "Pavlo Myroniuk"

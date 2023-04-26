@@ -9,6 +9,7 @@ tags = ["sspi", "windows", "winapi", "rust"]
 [extra]
 keywords = "SSPI, Windows, Rust, WinAPI"
 toc = true
+thumbnail = "sspi-thumbnail.png"
 +++
 
 # Goals
