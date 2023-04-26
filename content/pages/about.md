@@ -5,7 +5,7 @@ template = "pages.html"
 draft = false
 +++
 
-## Hi there :wave:
+# Hi there :wave:
 
 I am Pavlo Myroniuk :man_technologist:, a software developer from Ukraine :ukraine:. Loves Rust :crab: and open-source software.
 
@@ -21,14 +21,14 @@ I didn't set a purpose to tell you everything I know. My motivation is to tell a
 
 If you enjoy my articles and consider them useful, then just follow me on [GitHub](https://github.com/TheBestTvarynka) and star the corresponding repo.
 
-### :see_no_evil: About me
+## :see_no_evil: About me
 
 * :computer: [I force electrons to do the math](https://www.reddit.com/r/ProgrammerHumor/comments/jf95z8/the_best_ways_to_describe_the_job) :muscle:
 * :crab: Let's rewrite all in Rust :pleading_face:
 * :green_heart: Workout is a very important part of my daily routine :runner:
 * :notebook_with_decorative_cover: If you have any questions, notes, ideas, feel free to contact me :speech_balloon:
 
-### :zap: Technologies
+## :zap: Technologies
 
 ![Rust](https://img.shields.io/badge/-Rust-5c1e0f?style=flat-square&logo=Rust)
 ![Linux](https://img.shields.io/badge/-Linux-0f331b?style=flat-square&logo=Linux)
@@ -46,7 +46,7 @@ If you enjoy my articles and consider them useful, then just follow me on [GitHu
 ![GitHub](https://img.shields.io/badge/-GitHub-black?style=flat-square&logo=github)
 ![GitLab](https://img.shields.io/badge/-GitLab-black?style=flat-square&logo=gitlab)
 
-### :teddy_bear: Fun
+## :teddy_bear: Fun
 
 [![Lichess](https://img.shields.io/badge/-Lichess-black?style=flat-square&logo=lichess)](https://lichess.org/@/TheBestTvarynka)
 [![stack**overflow**](https://img.shields.io/badge/-Stackoverflow-black?style=flat-square&logo=stackoverflow)](https://stackoverflow.com/users/9123725/pavlo-myroniuk)

@@ -25,7 +25,7 @@ If you are familiar with SSPI and have worked with it, then this article most li
 
 **Non-goals**:
 
-* Explain how concrete SSP packages work (like `NTLM`, `Kerberos`, etc).
+* Explain how **concrete** SSP packages work (like `NTLM`, `Kerberos`, etc).
 * Teach how to write a custom SSP package. <sub>I mean, after reading this article you will have a brief idea of what you need to write but it's obviously not enough.</sub>
 
 **Does this article replace reading the documentation?** Of course not. It's just a good place to start.
@@ -104,9 +104,9 @@ The SSPI functions table has a lot of <sub>(?terrible?)</sub> functions. We'll t
 To bring at least some order, we will split SSPI functions into four categories. [The official documentation](https://learn.microsoft.com/en-us/windows/win32/secauthn/authentication-functions#sspi-functions) has a good description of it so we follow it:
 
 1. **Package management.** *SSPI package management functions initiate a security package, enumerate available packages, and query the attributes of a security package.*
-  * `EnumerateSecurityPackagesW`
-  * `InitSecurityInterfaceW`
-  * `QuerySecurityPackageInfoW`
+  * `EnumerateSecurityPackagesW`: list all available security packages in the SSP.
+  * `InitSecurityInterfaceW`: initialize security table.
+  * `QuerySecurityPackageInfoW`: query some information about the security package.
 2. **Credential management.** *Functions used to obtain credentials handle for the security context, set credentials attributes, and query information about credentials.*
   * `AcquireCredentialsHandleW`
   * `ExportSecurityContext`
@@ -126,10 +126,10 @@ To bring at least some order, we will split SSPI functions into four categories.
   * `SetContextAttributesW`
   * `RevertSecurityContext`
 4. **Message support.** *Those functions usually are called when the security context is established. You can use them to secure messages (encryption, hashing, etc).*
-  * `EncryptMessage`
-  * `DecryptMessage`
-  * `MakeSignature`
-  * `MakeSignature`
+  * `EncryptMessage`.
+  * `DecryptMessage`.
+  * `MakeSignature`.
+  * `MakeSignature`.
 
 Enough talking. Let's see SSPI in action. From the example below you will understand functions call order, and their purpose.
 
@@ -236,7 +236,11 @@ todo!("query and set credentials attributes.");
 
 ### Authentication
 
-Perfect. We have prepared credentials (credentials handle). Time to start actual authentication. The authentication process consists of sequential `InitializeSecurityContext` function calls. When we should stop? When this function returns `SEC_E_OK`, `SEC_I_COMPLETE_AND_CONTINUE`, or `SEC_I_COMPLETE_NEEDED` status code. i. e. we call the `InitializeSecurityContext` function unit it return appropriate status code. Generalized authentication flow is shown on the diagram below:
+Perfect. We have prepared credentials (credentials handle). Time to start actual authentication. The authentication process consists of sequential `InitializeSecurityContext` function calls.
+
+> *When we should stop?*
+
+When this function returns `SEC_E_OK`, `SEC_I_COMPLETE_AND_CONTINUE`, or `SEC_I_COMPLETE_NEEDED` status code. i. e. we call the `InitializeSecurityContext` function until it returns the appropriate status code. The generalized authentication flow is shown in the diagram below:
 
 [![](https://mermaid.ink/img/pako:eNptkMFqwzAQRH9l0cmBxB_gQyGx1WAKTqnTSzEYVVrHorYU1lLaNM6_V45LaaF7WnbeDOxcmLQKWcKazr7LVpCDfVYZCLOONnjQBoR37QJWqzvYRLnRTotOf2KJ0pN259Qahx9uMXs2Ny69DE44P8CUfZ2VdFJGTmRphPtoHUKhEbpDtfgNlDyteb17WMZxPAKfucFLiaj-QfM63RX7vHjmdcF5xrMRsqhEo-DVNw3SAM6CaxEGpBPStz-7-ffp4wjb6Akl6hP-GBqy_V98Oz_PlqxH6oVWoa7LJFUsRPdYsSSsStBbxSpzDVyozJZnI1niyOOS-aMSDjMtDiR6ljSiG8L1KMyLtf0MXb8AQjZ9HQ?type=png)](https://mermaid.live/edit#pako:eNptkMFqwzAQRH9l0cmBxB_gQyGx1WAKTqnTSzEYVVrHorYU1lLaNM6_V45LaaF7WnbeDOxcmLQKWcKazr7LVpCDfVYZCLOONnjQBoR37QJWqzvYRLnRTotOf2KJ0pN259Qahx9uMXs2Ny69DE44P8CUfZ2VdFJGTmRphPtoHUKhEbpDtfgNlDyteb17WMZxPAKfucFLiaj-QfM63RX7vHjmdcF5xrMRsqhEo-DVNw3SAM6CaxEGpBPStz-7-ffp4wjb6Akl6hP-GBqy_V98Oz_PlqxH6oVWoa7LJFUsRPdYsSSsStBbxSpzDVyozJZnI1niyOOS-aMSDjMtDiR6ljSiG8L1KMyLtf0MXb8AQjZ9HQ)
 
@@ -293,11 +297,46 @@ todo!("tell about the get context attributes function")
 
 ### Communication
 
+Imagine the situation: we want to send a very secret message to the server. In such case we should use the `EncryptMessage` function:
 
+```Rust
+let status = EncryptMessage(client_security_context, 0, &mut message, sequence_number);
+// send `message` to the server
+```
+
+I think you already guessed it, but still: encryption/decryption, and signature generation/verification are always in-place. This is why we don't have the output buffer parameter in this function.
+
+If we want to read encrypted messages (e. g. received from the server) then:
+
+```Rust
+let status = DecryptMessage(client_security_context, 0, &mut message, sequence_number);
+```
+
+The same thing with the `MakeSignature` and `VerifySignature` functions.
 
 ### Clean up
 
+Yes, memory leaks are memory safe, but it's better to not forget to clean up everything. SSPI has two main functions for that:
+
+* `FreeContextBuffer`. ([doc](https://learn.microsoft.com/en-us/windows/win32/api/sspi/nf-sspi-freecontextbuffer)). Only one rule: if the buffer was allocated by the security package, then you should free it using this function. If the buffer was allocated by yourself, then you should free it in the usual way.
+* `FreeCredentialsHandle`. ([doc](https://learn.microsoft.com/en-us/windows/win32/api/sspi/nf-sspi-freecredentialshandle)).
+* `DeleteSecurityContext`. ([doc](https://learn.microsoft.com/en-us/windows/win32/api/sspi/nf-sspi-deletesecuritycontext)).
+
+```Rust
+// ...
+let status = FreeCredentialsHandle(client_cred_handle);
+let status = DeleteSecurityContext(client_context_handle);
+```
+
 # Conclusion
+
+Finally, this story goes to the end. If you want to use SSPI on the server side then just replace the `InitializeSecurityContextW` function with `AcceptSecurityContext`.
+
+> *Wait! You haven't described other SSPI functions!*
+
+Don't panic, I know it. The other functions are rarely used and do not take a direct part in the authorization process.
+
+I hope you enjoy reading it and it'll help you in some way. If you want to share some feedback, ask a question, just task to me, then use [this page](https://tbt.qkation.com/about/) to contact me.
 
 # Doc, references, code
 
