@@ -228,13 +228,72 @@ After the `AcquireCredentialsHandleW` function call, the `credentials_handle` va
 
 However, to satisfy your curiosity, I will say what there may be (but don't tell anyone :stuck_out_tongue_winking_eye:): One of them can contain a pointer to some object (for example, a security context object), and another one can contain a pointer to the security package name. Because SSP can contain a lot of security packages, we need to store the security package name in some way that is currently used.
 
+This function has a lot of parameters and they are well explained in [the official documentation](https://learn.microsoft.com/en-us/windows/win32/secauthn/acquirecredentialshandle--general). Just don't forget that the type for the `pauthdata` pointer is package-specific. It means that different security packages usually require different types of `pauthdata`.
+
 ```Rust
 todo!("query and set credentials attributes.");
 ```
 
 ### Authentication
 
+Perfect. We have prepared credentials (credentials handle). Time to start actual authentication. The authentication process consists of sequential `InitializeSecurityContext` function calls. When we should stop? When this function returns `SEC_E_OK`, `SEC_I_COMPLETE_AND_CONTINUE`, or `SEC_I_COMPLETE_NEEDED` status code. i. e. we call the `InitializeSecurityContext` function unit it return appropriate status code. Generalized authentication flow is shown on the diagram below:
+
+[![](https://mermaid.ink/img/pako:eNptkMFqwzAQRH9l0cmBxB_gQyGx1WAKTqnTSzEYVVrHorYU1lLaNM6_V45LaaF7WnbeDOxcmLQKWcKazr7LVpCDfVYZCLOONnjQBoR37QJWqzvYRLnRTotOf2KJ0pN259Qahx9uMXs2Ny69DE44P8CUfZ2VdFJGTmRphPtoHUKhEbpDtfgNlDyteb17WMZxPAKfucFLiaj-QfM63RX7vHjmdcF5xrMRsqhEo-DVNw3SAM6CaxEGpBPStz-7-ffp4wjb6Akl6hP-GBqy_V98Oz_PlqxH6oVWoa7LJFUsRPdYsSSsStBbxSpzDVyozJZnI1niyOOS-aMSDjMtDiR6ljSiG8L1KMyLtf0MXb8AQjZ9HQ?type=png)](https://mermaid.live/edit#pako:eNptkMFqwzAQRH9l0cmBxB_gQyGx1WAKTqnTSzEYVVrHorYU1lLaNM6_V45LaaF7WnbeDOxcmLQKWcKazr7LVpCDfVYZCLOONnjQBoR37QJWqzvYRLnRTotOf2KJ0pN259Qahx9uMXs2Ny69DE44P8CUfZ2VdFJGTmRphPtoHUKhEbpDtfgNlDyteb17WMZxPAKfucFLiaj-QfM63RX7vHjmdcF5xrMRsqhEo-DVNw3SAM6CaxEGpBPStz-7-ffp4wjb6Akl6hP-GBqy_V98Oz_PlqxH6oVWoa7LJFUsRPdYsSSsStBbxSpzDVyozJZnI1niyOOS-aMSDjMtDiR6ljSiG8L1KMyLtf0MXb8AQjZ9HQ)
+
+Great, pretty simple. Now let's implement it in the code ([src](https://github.com/TheBestTvarynka/trash-code/blob/main/sspi-introduction/src/authentication.rs#L24)):
+
+```Rust
+let client_status = InitializeSecurityContextW(
+    &mut client_credentials_handle,
+    unwrap_sec_handle(&mut client_security_context),
+    target_name.as_mut_ptr(),
+    // MUTUAL_AUTH and ALLOCATE_MEMORY
+    0x2 | 0x100,
+    0,
+    // Native data representation:
+    0x10,
+    &mut client_input_buffers,
+    0,
+    &mut new_client_security_context,
+    &mut client_output_buffers,
+    &mut context_attributes as *mut i32 as *mut _,
+    &mut expiry as *mut _,
+);
+```
+
+> *Oh my gosh. So many parameters. We definitely need an explanation.*
+
+Agreed. But before I explain each of them, I would like to insert small note about the source code you will find in the repo: I didn't create any real servers or TCP/TLS connections. I just convert and pass buffers from one function to another. You will see it in the code comments.
+
+Hardest part described below:
+
+* `phcredential`: a pointer to the credentials handle. We have it after the `AcquireCredentialsHandleW` function call.
+* `phcontext`: a pointer to the security context handle.
+> *But wait. We don't have a such one.*
+
+Yes. On the first function call we pass the `NULL` here. The security context handle will be created by the function itself during the first invocation and written in the `phnewcontext` parameter.
+* `psztargetname`: *"a pointer to a null-terminated string that indicates the service principal name (SPN)"* ([docs](https://learn.microsoft.com/en-us/windows/win32/secauthn/initializesecuritycontext--ntlm)).
+* `fcontextreq`: a context requirements flags. Basically, this flags tell the security package how to do authentication. Like, what session key to use, what additional things to require, etc. Those flags differ in the different security packages.
+* `reserved1`, `reserved2` are reserved and not used.
+* `targetdatarep`: *"The data representation, such as byte ordering, on the target."* ([docs](https://learn.microsoft.com/en-us/windows/win32/secauthn/initializesecuritycontext--ntlm))
+* `pinput`: input buffers for this function. On the first function call, we don't have any input buffers so we should pass empty `SecBufferDesc`.
+> *What types of security buffers should I choose, how many of them do I need, and in what sequence?*
+
+Docs. Search for it in the documentation of the corresponding security package. If you can't find it there, then search in the open-source projects. And remember one important thing: **never change buffers' order or type**.
+* `phnewcontext`: a new security context handle will be written here. You should use this handle for the next function call.
+* `poutput`: same as `pinput` but output buffers instead of input.
+* `pfcontextattr`: flags that describe established security context. We use `fcontextreq` to specify some options for authentication. Ans use `pfcontextattr` to see what options have been established (set).
+* `ptsexpiry`: the expiration time of the context.
+
+Phew, the hardest part is gone. Now we (*finally*) have the established security context. What's next? Now we can do everything we want, but more importantly, we can safely transfer any messages to the server and receive server messages securely.
+
+```rust
+todo!("tell about the get context attributes function")
+```
+
 ### Communication
+
+
 
 ### Clean up
 
@@ -248,3 +307,4 @@ todo!("query and set credentials attributes.");
 4. [Authentication Functions.](https://learn.microsoft.com/en-us/windows/win32/secauthn/authentication-functions#sspi-functions)
 5. [Using SSPI.](https://learn.microsoft.com/en-us/windows/win32/secauthn/using-sspi)
 6. [Example source code.](https://github.com/TheBestTvarynka/trash-code/tree/main/sspi-introduction)
+
