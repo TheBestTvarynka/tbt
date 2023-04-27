@@ -22,11 +22,11 @@
   {{- macros_head::seo(config=config, title=title, title_addition=title_addition, description=description, is_home=true) }}
 {%- endblock seo %}
 
-
-
 {%- block content %}
     <div>
-    {%- for page in paginator.pages %}
+      <h1>Posts</h1>
+    {%- set sm = get_section(path="posts/_index.md") %}
+    {%- for page in sm.pages %}
       <article>
         {{- macros::title_index(page=page, config=config) }}
         {%- if config.extra.meta_index.position %}
@@ -53,8 +53,36 @@
       </article>
     {%- endfor %}
     {{- macros::pagination(paginator=paginator, config=config) }}
+      <h1>Projects</h1>
+    {%- set pm = get_section(path="projects/_index.md") %}
+    {%- for project in pm.pages %}
+      <article>
+        {{- macros::title_index(page=project, config=config) }}
+        {%- if config.extra.meta_index.position %}
+        {%- if config.extra.meta_index.position == "top" or config.extra.meta_index.position == "both" %}
+        {{- macros::meta_index(page=project, config=config) }}
+        {%- endif %}{%- endif %}
+        <div class="sum">
+        <p>
+        {%- if project.summary %}
+          {{ project.summary | markdown(inline=true) | safe }}
+        {%- elif project.description %}
+          {{ project.description | safe }}
+        {%- elif project.content %}
+          {{ project.content | striptags | truncate(length=150) | safe }}
+        {%- elif project.extra.static_thumbnail %}
+        {%- endif %}
+          <a href="{{ project.permalink | safe }}{%- if config.extra.uglyurls %}index.html{%- endif %}">...more</a>
+        </div>
+        {%- if config.extra.meta_index.position %}
+        {%- if config.extra.meta_index.position == "bottom" or config.extra.meta_index.position == "both" %}
+        {{- macros::meta_index(page=project, config=config) }}
+        {%- endif %}
+        {%- endif %}
+      </article>
+    {%- endfor %}
     </div>
-  {%- set section_item = get_section(path="_index.md") %}
+  {%- set section_item = get_section(path="posts/_index.md") %}
   {%- if config.extra.recent | default(value=true) %}
     <div class="toc">
       <div class="toc-sticky">
