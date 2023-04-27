@@ -28,7 +28,7 @@ Basically, it just takes the input bytes in some format and performs the selecte
 
 #### JWT debugger
 
-Another interesting feature is the JWT debugger. I had some time working with Azure AD authorization and its JWT tokens. Why did I decide to implement my own if jwt.io already exists? The answer is pretty obvious: the existing one is very inconvenient:
+Another interesting feature is the JWT debugger. I had some time working with Azure AD authorization and its JWT tokens. Why did I decide to implement my own if [jwt.io](https://jwt.io) already exists? The answer is pretty obvious: the existing one is very inconvenient:
 
 * I really don't like its big header. AzureAD tokens are pretty big. Such a massive header is just a waste of space.
 * Problems with scrolling. Did you ever try to scroll the header or payload section that contains more than five fields? If not then try.
