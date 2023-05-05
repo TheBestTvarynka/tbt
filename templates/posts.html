@@ -18,12 +18,12 @@
 {%- endblock seo %}
 
 {%- block content %}
-    <div>
-      {%- for year, posts in section.pages | group_by(attribute="year") %}
-      <h2>{{ year }}</h2>
-      {%- for post in posts %}
-      <p><a href="{{ post.permalink | safe }}">{{ post.title }}</a> - <time datetime="{{ post.date }}">{{ post.date | date(format="%F") }}</time></p>
-      {%- endfor %}
-      {%- endfor %}
-    </div>
+  <div>
+    {%- for year, posts in section.pages | group_by(attribute="year") %}
+    <h2>{{ year }}</h2>
+    {%- for post in posts %}
+    <p><a href="{{ post.permalink | safe }}">{{ post.title }}</a> - <time datetime="{{ post.date }}">{{ post.date | date(format="%F") }}</time></p>
+    {%- endfor %}
+    {%- endfor %}
+  </div>
 {%- endblock content %}
