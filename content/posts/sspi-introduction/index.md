@@ -9,6 +9,7 @@ tags = ["sspi", "windows", "winapi", "rust"]
 [extra]
 keywords = "SSPI, Windows, Rust, WinAPI"
 toc = true
+mermaid = true
 thumbnail = "sspi-thumbnail.png"
 +++
 
@@ -296,7 +297,16 @@ Perfect. We have prepared credentials (credentials handle). Time to start actual
 
 When this function returns `SEC_E_OK`, `SEC_I_COMPLETE_AND_CONTINUE`, or `SEC_I_COMPLETE_NEEDED` status code. i. e. we call the `InitializeSecurityContext` function until it returns the appropriate status code. The generalized authentication flow is shown in the diagram below:
 
-[![](https://mermaid.ink/img/pako:eNptkMFqwzAQRH9l0cmBxB_gQyGx1WAKTqnTSzEYVVrHorYU1lLaNM6_V45LaaF7WnbeDOxcmLQKWcKazr7LVpCDfVYZCLOONnjQBoR37QJWqzvYRLnRTotOf2KJ0pN259Qahx9uMXs2Ny69DE44P8CUfZ2VdFJGTmRphPtoHUKhEbpDtfgNlDyteb17WMZxPAKfucFLiaj-QfM63RX7vHjmdcF5xrMRsqhEo-DVNw3SAM6CaxEGpBPStz-7-ffp4wjb6Akl6hP-GBqy_V98Oz_PlqxH6oVWoa7LJFUsRPdYsSSsStBbxSpzDVyozJZnI1niyOOS-aMSDjMtDiR6ljSiG8L1KMyLtf0MXb8AQjZ9HQ?type=png)](https://mermaid.live/edit#pako:eNptkMFqwzAQRH9l0cmBxB_gQyGx1WAKTqnTSzEYVVrHorYU1lLaNM6_V45LaaF7WnbeDOxcmLQKWcKazr7LVpCDfVYZCLOONnjQBoR37QJWqzvYRLnRTotOf2KJ0pN259Qahx9uMXs2Ny69DE44P8CUfZ2VdFJGTmRphPtoHUKhEbpDtfgNlDyteb17WMZxPAKfucFLiaj-QfM63RX7vHjmdcF5xrMRsqhEo-DVNw3SAM6CaxEGpBPStz-7-ffp4wjb6Akl6hP-GBqy_V98Oz_PlqxH6oVWoa7LJFUsRPdYsSSsStBbxSpzDVyozJZnI1niyOOS-aMSDjMtDiR6ljSiG8L1KMyLtf0MXb8AQjZ9HQ)
+{% mermaiddiagram() %}
+flowchart TD
+    A(Begin auth) --> B(InitializeSecurityContext)
+    B --> C{status code}
+    C -->|Error| F(Auth failed)
+    C -->|SEC_E_OK,...| E(Auth succeeded)
+    C -->|SEC_I_CONTINUE_NEEDED| D(Send buffers to the server)
+    D -->|TCP| G(Receive buffers from server)
+    G --> B
+{% end %}
 
 Great, pretty simple. Now let's implement it in the code ([src](https://github.com/TheBestTvarynka/trash-code/blob/main/sspi-introduction/src/authentication.rs#L24)):
 
