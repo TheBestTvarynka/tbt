@@ -237,6 +237,155 @@ Yep. With this approach, we remove all custom parsing and formatting stuff. More
 
 The full [src](https://github.com/TheBestTvarynka/trash-code/commit/eae20b208693f6dafeb7910fd8b26ca24987937b) code of the example above.
 
-## Tw
+## Commands and arg groups
 
-## Th
+Before we start this recipe, I wanna recall one thing: the difference between commands and args. First of all, commands don't have any dashed or slashed in the name. They are just words. Commands specify **what** to do, whereas args specify **how** to do it. Example:
+
+```bash
+gcloud auth login --cred-file creds.json
+# What to do? `login`.
+# How to do it? By taking a file with creds named `creds.json`.
+```
+
+In this recipe, we'll work with commands and args. You'll see a more complex example of the `clap` configuration.
+
+> *Interesting. What do we need to configure? :smile:*
+
+We all know the [Imgur](https://imgur.com/) site (if not, then just visit). It has an [API](https://api.imgur.com/). Let's imagine that we decided to write the CLI tool that helps us to work with the *Imgur* site using its API. So, now we need to design the tool interface. We do not plan to cover the whole API. Just downloading and uploading. A quick draft configuration:
+
+```rust
+#[derive(Debug, Clone, Subcommand)]
+enum Command {
+    Upload,
+    Download,
+}
+
+/// Img tool config structure
+#[derive(Parser, Debug)]
+struct Config {
+    /// command to execute
+    #[command(subcommand)]
+    pub command: Command,
+
+    /// Path to the api key file
+    #[arg(long, env = "API-KEY")]
+    pub api_key: PathBuff,
+}
+```
+
+We immediately have a few interesting moments: the [Subcommand](https://docs.rs/clap/latest/clap/trait.Subcommand.html) trait derive and the `PathBuff` type in the `api_key` field. We are not forced to use only simple types for args like `String`s, numbers, etc. If you have a concrete type that describes your value ([`PathBuff`](https://doc.rust-lang.org/stable/std/path/struct.PathBuf.html) for file path, [`url::Url`](https://docs.rs/url/latest/url/struct.Url.html) for urls, or even custom ones), then use this type in the configuration. It'll handle more errors during parsing and make further work easier.
+
+Now we add params for downloading command:
+
+```rust
+#[derive(Debug, Clone, Subcommand)]
+enum Command {
+    Upload,
+    Download {
+        /// Source image link
+        #[arg(long)]
+        link: Url,  // <--- Pay attention to the type. We use the `Url` here and not the `String`.
+
+        /// Path for the image
+        #[arg(long)]
+        dest_file: PathBuf,
+    }
+}
+```
+
+To download the image we need only two things: the source image link and the destination file path. This is how it works:
+
+```bash
+./img-tool download --help
+# Usage: img-tool --api-key <API_KEY> download --link <LINK> --dest-file <DEST_FILE>
+# 
+# Options:
+#       --link <LINK>            Source image link
+#       --dest-file <DEST_FILE>  Path for the image
+#   -h, --help                   Print help
+
+./img-tool --api-key key.json download --link https://imgur.com/gallery/vNOUshX --dest-file ferris.png
+# Config { command: Download { link: Url { scheme: "https", cannot_be_a_base: false, username: "", password: None, host: Some(Domain("imgur.com")), port: None, path: "/gallery/vNOUshX", query: None, fragment: None }, dest_file: "ferris.png" }, api_key: "key.json" }
+
+./img-tool --api-key key.json download --link :imgur.com/gallery/vNOUshX --dest-file ferris.png
+# error: invalid value ':imgur.com/gallery/vNOUshX' for '--link <LINK>': relative URL without a base
+# 
+# For more information, try '--help'.
+```
+
+Cool and pretty simple. But the upload is a little bit more complex. We wanna have two options where take the photo to upload: file image on the device or any public URL on the Internet. Here is the configuration for the upload command:
+
+```rust
+#[derive(Debug, Clone, Args)]
+#[clap(group(
+    ArgGroup::new("file-source")
+        .required(true)
+        .args(&["file", "link"]),
+))]
+/// Possible types of the file source
+struct FileSource {
+    /// Path to the image on the device
+    #[arg(long)]
+    file: Option<PathBuf>,
+    
+    /// Url to the image on the Internet
+    #[arg(long)]
+    link: Option<Url>,
+}
+
+#[derive(Debug, Clone, Subcommand)]
+enum Command {
+    Upload {
+        /// File to upload
+        #[command(flatten)]
+        file_source: FileSource,
+        
+        /// Folder for the image on the site
+        #[arg(long)]
+        folder: String,
+    },
+    Download { /* omitted */ },
+}
+```
+
+Okay, we have two file sources: file or link. And we use [ArgGroud](https://docs.rs/clap/latest/clap/struct.ArgGroup.html) to specify that the user must specify only one of them: either file or link. And here is the demo:
+
+```bash
+./img-tool upload --help
+# Possible types of the file source
+# 
+# Usage: img-tool --api-key <API_KEY> upload --folder <FOLDER> <--file <FILE>|--link <LINK>>
+# 
+# Options:
+#       --file <FILE>      Path to the image on the device
+#       --link <LINK>      Url to the image on the Internet
+#       --folder <FOLDER>  Folder for the image on the site
+#   -h, --help             Print help
+
+./img-tool --api-key key.json upload --folder ferris --file crab_ferris.png
+# Config { command: Upload { file_source: FileSource { file: Some("crab_ferris.png"), link: None }, folder: "ferris" }, api_key: "key.json" }
+
+./img-tool --api-key key.json upload --folder ferris --link https://i.imgflip.com/7gq1em.jpg --file crab_ferris.png
+# error: the argument '--file <FILE>' cannot be used with '--link <LINK>'
+# 
+# Usage: img-tool --api-key <API_KEY> upload --folder <FOLDER> <--file <FILE>|--link <LINK>>
+# 
+# For more information, try '--help'.
+
+./img-tool --api-key key.json upload --folder ferris --link https://i.imgflip.com/7gq1em.jpg
+# Config { command: Upload { file_source: FileSource { file: None, link: Some(Url { scheme: "https", cannot_be_a_base: false, username: "", password: None, host: Some(Domain("i.imgflip.com")), port: None, path: "/7gq1em.jpg", query: None, fragment: None }) }, folder: "ferris" }, api_key: "key.json" }
+```
+
+Another interesting thing: we can see the separated `--file` and `--link` args in the help message by the `<>` triangle brackets. It shows the user that only one of the is needed. Cool, right? :sunglasses:
+
+The full [src](https://github.com/TheBestTvarynka/trash-code/commit/db24a5bb5476d05eff35222955354cca7ef83797) code of the example above.
+
+## Parsing args into a custom structure
+
+This recipe will be smaller than the previous ones and similar to the second one. But I just want to show that we can do such tricks.
+
+# References
+
+1. Official docs: [derive](https://docs.rs/clap/latest/clap/_derive/index.html) and [builder](https://docs.rs/clap/latest/clap/index.html) references.
+
+The end. The official reference has all you need.
