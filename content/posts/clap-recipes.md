@@ -31,7 +31,7 @@ The current article is basically recipes. It means, here we have described concr
 
 # Recipes
 
-## 1. Collecting multiple values
+## Collecting multiple values
 
 Imagine the following situation, you are writing some server. It can be the server side of some protocol, or proxy server, or something like that. At some point, you decided to add encryption. Now you need to add the user the ability to pass allowed encryption algorithms (ciphers) for server sessions.
 
@@ -189,6 +189,54 @@ Let's try to run the implementation with a wrapper:
 
 The full [src](https://github.com/TheBestTvarynka/trash-code/commit/9154610b4ce2343d38ab51abbbe8b5953b35bd61) code of the example above.
 
-## 2. Tw
+> *Okay, but are you sure that we can't do better? I am still thinking about a better solution.*
 
-## 3. Th
+IDK :confused:. Let's explore the docs more thoroughly... Oh, it turns out it's called the [value_delimiter](https://docs.rs/clap/latest/clap/struct.Arg.html#method.value_delimiter):
+
+```rust
+/// Server config structure
+#[derive(Parser, Debug)]
+struct Config {
+    /// Allowed encryption algorithms list (separated by ':' or space).
+    #[arg(
+        long,
+        value_name = "CIPHERS",
+        default_values_t = vec![Cipher::Aes256],
+        value_delimiter = ':',
+        num_args = 1..,        // at least one allowed cipher type
+    )]
+    pub enc_algs: Vec<Cipher>,
+}
+```
+
+> *Good job. It's way better now.*
+
+Yep. With this approach, we remove all custom parsing and formatting stuff. Moreover, the help message and error reporting became better:
+
+```bash
+./cool-server --help
+# Server config structure
+# 
+# Usage: cool-server [OPTIONS]
+# 
+# Options:
+#       --enc-algs <CIPHERS>...  Allowed encryption algorithms list (separated by ':' or space) [default: aes256] [possible values: aes128, aes256, des3]
+#   -h, --help                   Print help
+
+./cool-server --enc-algs aes256:des3
+# Config { enc_algs: [Aes256, Des3] }
+
+./cool-server --enc-algs aes256:des4
+# error: invalid value 'des4' for '--enc-algs <CIPHERS>...'
+#   [possible values: aes128, aes256, des3]
+# 
+#   tip: a similar value exists: 'des3'
+# 
+# For more information, try '--help'.
+```
+
+The full [src](https://github.com/TheBestTvarynka/trash-code/commit/eae20b208693f6dafeb7910fd8b26ca24987937b) code of the example above.
+
+## Tw
+
+## Th
