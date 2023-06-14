@@ -1,6 +1,6 @@
 +++
 title = "Rust Clap recipes"
-date = 2023-06-27
+date = 2023-06-15
 draft = false
 
 [taxonomies]
@@ -9,8 +9,7 @@ tags = ["clap", "recipes", "rust"]
 [extra]
 keywords = "Rust, Clap, CLI, Args, Parsing"
 toc = true
-# mermaid = true
-# thumbnail = "sspi-thumbnail.png"
+thumbnail = "clap-recipes-thumbnail.png"
 +++
 
 I bet you know but I still wanna recall it. [`Clap`](https://github.com/clap-rs/clap) is a full-featured, fast Command Line Argument Parser for Rust. [docs.rs](https://docs.rs/clap/latest/clap/). [crates.io](https://crates.io/crates/clap).
