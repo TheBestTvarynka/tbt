@@ -317,11 +317,7 @@ Cool and pretty simple. But the upload is a little bit more complex. We wanna ha
 
 ```rust
 #[derive(Debug, Clone, Args)]
-#[clap(group(
-    ArgGroup::new("file-source")
-        .required(true)
-        .args(&["file", "link"]),
-))]
+#[group(required = true, args = ["file", "link"])]
 /// Possible types of the file source
 struct FileSource {
     /// Path to the image on the device
@@ -378,11 +374,65 @@ Okay, we have two file sources: file or link. And we use [ArgGroud](https://docs
 
 Another interesting thing: we can see the separated `--file` and `--link` args in the help message by the `<>` triangle brackets. It shows the user that only one of the is needed. Cool, right? :sunglasses:
 
-The full [src](https://github.com/TheBestTvarynka/trash-code/commit/db24a5bb5476d05eff35222955354cca7ef83797) code of the example above.
+The full [src](https://github.com/TheBestTvarynka/trash-code/commit/aba3c688fa83a397d14a9339f564efe4625516e1) code of the example above.
 
 ## Parsing args into a custom structure
 
 This recipe will be smaller than the previous ones and similar to the second one. But I just want to show that we can do such tricks.
+
+We are going to improve prev example by adding a more flexible way to pass the API key. Assume that for authentication we need two tokens: app id and app secret. And we want to operate them as one structure. Usually, in such cases, developers take them as two separate strings and then create one structure based on those strings. But we a smarter and know how to use commands:
+
+```rust
+#[derive(Debug, Clone, Args)]
+struct ApiKey {
+    /// app id
+    #[arg(long)]
+    pub api_app_id: String,
+
+    /// app secret
+    #[arg(long)]
+    pub api_app_secret: String,
+}
+
+/// Img tool config structure
+#[derive(Parser, Debug)]
+struct Config {
+    /// command to execute
+    #[command(subcommand)]
+    pub command: Command,
+
+    /// API key data
+    #[command(flatten)]
+    pub api_key: ApiKey,
+}
+```
+
+Let's test it and see the trick:
+
+```bash
+./img-tool --help
+# Img tool config structure
+# 
+# Usage: img-tool --api-app-id <API_APP_ID> --api-app-secret <API_APP_SECRET> <COMMAND>
+# 
+# Commands:
+#   upload    Upload image to the Imgur
+#   download  
+#   help      Print this message or the help of the given subcommand(s)
+# 
+# Options:
+#       --api-app-id <API_APP_ID>          app id
+#       --api-app-secret <API_APP_SECRET>  app secret
+#   -h, --help                             Print help
+```
+
+We have two separate args `api-app-is` and `api-app-secret`, but they will be parsed and placed in the one `ApiKey` structure. It's very convenient and we can continue to work with the auth data as one structure without any additional actions.
+
+The full [src](https://github.com/TheBestTvarynka/trash-code/commit/c3a77caad5bb861c15bd007cb8091d19e5e001c3) code of the example above.
+
+## Unsolvable problem
+
+.
 
 # References
 
