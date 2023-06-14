@@ -432,10 +432,90 @@ The full [src](https://github.com/TheBestTvarynka/trash-code/commit/c3a77caad5bb
 
 ## Unsolvable problem
 
-.
+This section is not an actual recipe. I'll tell you about a problem that doesn't have a perfect solution so far (or I just cannot find it).
 
-# References
+Let's take the previous recipe and make the task more difficult. Assume that the user should specify the app id and secret **OR** API key file. In other words, the user should provide the one `--api-key-file` arg or `--api-app-id` and `--api-app-secret` args. It means one **OR** two arguments.
+
+I found a few similar questions on the Internet:
+
+* [Clap either -a OR (-b AND -c) arguments](https://users.rust-lang.org/t/clap-either-a-or-b-and-c-arguments/80331)
+* [Using clap-derive with two groups of arguments](https://stackoverflow.com/questions/74846776/using-clap-derive-with-two-groups-of-arguments)
+
+But both of them didn't have any useful answers. So far, the following code is the best how we can solve this problem:
+
+```rust
+#[derive(Debug, Clone, Args)]
+struct ApiKeyData {
+    /// app id
+    #[arg(long, requires = "api_app_secret")]
+    pub api_app_id: Option<String>,
+
+    /// app secret
+    #[arg(long, requires = "api_app_id")]
+    pub api_app_secret: Option<String>,
+}
+
+#[derive(Debug, Clone, Args)]
+#[group(required = true, args = ["api_key_file", "api_app_id", "api_app_secret"])]
+/// Possible types of the api key source
+struct ApiKey {
+    /// Path to the json file with API key
+    #[arg(long)]
+    api_key_file: Option<PathBuf>,
+
+    /// Specify API key data in args
+    #[command(flatten)]
+    api_key_data: ApiKeyData,
+}
+
+// The `Config` structure remains unchanged since the last recipe
+```
+
+The main idea is to create an [`ArgGroup`](https://docs.rs/clap/latest/clap/struct.ArgGroup.html) and require additional args in the `ApiKeyData` structure if one of the needed args is not specified. This approach has a lot of big inconveniences:
+
+* Fields in the `ApiKeyData` structure are optional. Yes, during parsing they will be validated and 100% have values, but for further work, we are forced to unwrap them and create another structure.
+* The help message for the user is not fully informative. It shows the among those three args only one is required. That is a lie because we need a key file **OR** app id + secret.
+
+Enough talking. Let's see it in action:
+
+```bash
+./img-tool --help
+# Img tool config structure
+# 
+# Usage: img-tool <--api-key-file <API_KEY_FILE>|--api-app-id <API_APP_ID>|--api-app-secret <API_APP_SECRET>> <COMMAND>
+# 
+# Commands:
+#   upload    Upload image to the Imgur
+#   download  
+#   help      Print this message or the help of the given subcommand(s)
+# 
+# Options:
+#       --api-key-file <API_KEY_FILE>      Path to the json file with API key
+#       --api-app-id <API_APP_ID>          app id
+#       --api-app-secret <API_APP_SECRET>  app secret
+#   -h, --help                             Print help
+
+./img-tool --api-key-file key.json download --link https://imgur.com/gallery/vNOUshX --dest-file ferris.png
+# Config { command: Download { link: Url { scheme: "https", cannot_be_a_base: false, username: "", password: None, host: Some(Domain("imgur.com")), port: None, path: "/gallery/vNOUshX", query: None, fragment: None }, dest_file: "ferris.png" }, api_key: ApiKey { api_key_file: Some("key.json"), api_key_data: ApiKeyData { api_app_id: None, api_app_secret: None } } }
+
+./img-tool --api-app-id tbt --api-app-secret secret download --link https://imgur.com/gallery/vNOUshX --dest-file ferris.png
+# Config { command: Download { link: Url { scheme: "https", cannot_be_a_base: false, username: "", password: None, host: Some(Domain("imgur.com")), port: None, path: "/gallery/vNOUshX", query: None, fragment: None }, dest_file: "ferris.png" }, api_key: ApiKey { api_key_file: None, api_key_data: ApiKeyData { api_app_id: Some("tbt"), api_app_secret: Some("secret") } } }
+
+./img-tool --api-app-id tbt download --link https://imgur.com/gallery/vNOUshX --dest-file ferris.png
+# error: the following required arguments were not provided:
+#   --api-app-secret <API_APP_SECRET>
+# 
+# Usage: img-tool <--api-key-file <API_KEY_FILE>|--api-app-id <API_APP_ID>|--api-app-secret <API_APP_SECRET>> <COMMAND>
+# 
+# For more information, try '--help'.
+```
+
+The full [src](https://github.com/TheBestTvarynka/trash-code/commit/6d5ec50ea36aa2ca6fab7409e68c08a46d1a346e) code of the example above. Conclusion: this problem is solvable but in a very inconvenient way.
+
+# References & final note
 
 1. Official docs: [derive](https://docs.rs/clap/latest/clap/_derive/index.html) and [builder](https://docs.rs/clap/latest/clap/index.html) references.
 
 The end. The official reference has all you need.
+
+As you can see, the `clap` gives us a lot of opportunities to configure args parsing and validation. Sometimes it's really worth it to read the docs or references. **Advice for the future:** try to move as much work as you can to the `clap`. It's a very powerful tool, so you shouldn't be bothered by manual parsing or validation of the args.
