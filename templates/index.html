@@ -53,6 +53,8 @@
       </article>
     {%- endfor %}
     {{- macros::pagination(paginator=paginator, config=config) }}
+      <br>
+      <hr>
       <h1>Projects</h1>
     {%- set pm = get_section(path="projects/_index.md") %}
     {%- for project in pm.pages %}
