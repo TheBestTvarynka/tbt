@@ -54,7 +54,7 @@ Cool. We see a lot of functions calls, their before and after parameters, flags,
 
 *Note.* The APDU message - is the communication unit between a smart card reader and a smart card. More info: [wikipedia](https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit), [yubikey-reference/apdu](https://docs.yubico.com/yesdk/users-manual/yubikey-reference/apdu.html).
 
-The [`ScardTransmit`](https://learn.microsoft.com/en-us/windows/win32/api/winscard/nf-winscard-scardtransmit) function has in- and outbound APDU messages and they defined in the function signature as follows:
+The [`ScardTransmit`](https://learn.microsoft.com/en-us/windows/win32/api/winscard/nf-winscard-scardtransmit) function has in- and outbound APDU messages and they defined in the function signature as follows :point_down::
 
 ```c++
 LONG SCardTransmit(
@@ -78,9 +78,66 @@ The answer is in the next section.
 
 # Time to fix XML definitions
 
-Example how we can fix it, recording after.
+To answer the previous question, lets ask a new one: how the API Monitor even parse and recognize the API functions, parameters, etc? Of course, here is no any magic, but XML definitions :pensive: . Basically, the API Monitor has XML file for every supported library with defined API in it.
 
-# What if we have custom DLL to monitor
+> *So, maybe we can just edit existing XML for the WinSCard API and record the buffers?*
+
+Exactly. Someone who wrote the XML definition for the WinSCard didn't put enough attention and wrote them somehow.
+
+Initially, I read about fixing those XML definitions in [this](https://www.mysmartlogon.com/knowledge-base/trace-apdu-on-windows/) article. I was surprised that only very little devs know about it and how to use it.
+
+Okay, enough talking, time to fix the code:
+
+```xml
+<!-- File: C:\Program Files\rohitab.com\API Monitor\API\Headers\scard.h.xml -->
+<!-- [SCARD_DISPOSITION] -->
+<Variable Name="[SCARD_DISPOSITION]" Type="Alias" Base="LONG">
+  <Display Name="LONG" />
+  <Enum>
+    <Set Name="SCARD_LEAVE_CARD"              Value="0" />
+    <Set Name="SCARD_RESET_CARD"              Value="1" />
+    <Set Name="SCARD_UNPOWER_CARD"            Value="2" />
+    <Set Name="SCARD_EJECT_CARD"              Value="3" />
+  </Enum>
+</Variable>
+```
+
+```xml
+<!-- File: C:\Program Files\rohitab.com\API Monitor\API\Windows\WinSCard.xml -->
+<Api Name="SCardDisconnect">
+  <Param Type="SCARDHANDLE" Name="hCard" />
+  <Param Type="[SCARD_DISPOSITION]" Name="dwDisposition" />
+  <Return Type="[SCARD_ERROR]" />
+</Api>
+<Api Name="SCardEndTransaction">
+  <Param Type="SCARDHANDLE" Name="hCard" />
+  <Param Type="[SCARD_DISPOSITION]" Name="dwDisposition" />
+  <Return Type="[SCARD_ERROR]" />
+</Api>
+
+<Api Name="SCardTransmit">
+  <Param Type="SCARDHANDLE" Name="hCard" />
+  <Param Type="LPCSCARD_IO_REQUEST" Name="pioSendPci"/>
+  <Param Type="LPCBYTE" Name="pbSendBuffer" Count="cbSendLength" />
+  <Param Type="DWORD" Name="cbSendLength" />
+  <Param Type="LPSCARD_IO_REQUEST" Name="pioRecvPci" />
+  <Param Type="LPBYTE" Name="pbRecvBuffer" PostCount="pcbRecvLength"/>
+  <Param Type="LPDWORD" Name="pcbRecvLength" />
+  <Return Type="[SCARD_ERROR]" />
+</Api>
+```
+
+**Note.** You will have other paths if you installed the API Monitor in the non-default location.
+
+You can compare old and new XML and see the difference. Now all should work. Let's try again to record the API calls. Here is my result:
+
+{{ img(src="scardtransmit_with_buffer.png" alt="SCardTransmit with buffer") }}
+
+{{ img(src="scardtransmit_with_out_buffer.png" alt="SCardTransmit with buffer") }}
+
+Congratulations :hibiscus: . Now it works well and we can observe input and output buffers.
+
+# What if we have a custom DLL to monitor?
 
 Write a simple program, dll (in Rust of course), XML definitions, show how it works.
 
