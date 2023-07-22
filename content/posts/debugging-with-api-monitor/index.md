@@ -44,11 +44,11 @@ Start as usual:
 
 1. Select only needed API.
 
-*selected api*
+{{ img(src="api-filter.png" alt="API filter") }}
 
 2. Run the executable in the API Monitor. Here is what I got:
 
-*recording*
+{{ img(src="api-recording.png" alt="API recording demo") }}
 
 Cool. We see a lot of functions calls, their before and after parameters, flags, and much more. But here is one problem that blocks us from the further investigation: we don't have recorded in- and outbound APDU messages.
 
@@ -70,7 +70,7 @@ LONG SCardTransmit(
 
 From the function definition we can see that buffers length is defined in the `cbSendLength` and `pcbRecvLength` parameters. So, it's logical to assume that API Monitor will capture those buffers during the recording because lengths are known. But unfortunately, we have only pointer value recorded.
 
-*image of the scardtransmit function call*
+{{ img(src="scardtransmit.png" alt="SCardTransmit") }}
 
 > *Why it's happening? The API Monitor captures buffers with defined (known) length as I remember from the documentation.*
 
