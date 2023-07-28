@@ -1,6 +1,6 @@
 +++
 title = "Debugging with API Monitor"
-date = 2023-07-25
+date = 2023-07-28
 draft = false
 
 [taxonomies]
@@ -296,7 +296,7 @@ Now we have working program that uses custom external DLL. Perfect. The most int
 
 ## Writing XML definitions
 
-There are not any official guides on how to write such XML definitions. I just explored existing XML in the `C:\Program Files\rohitab.com\API Monitor\API` directory and wrote my own for the `imgur_api.dll`. Here is my shitty XML:
+There are no any official guides on how to write such XML definitions. I just explored existing XMLs in the `C:\Program Files\rohitab.com\API Monitor\API` directory and wrote my own for the `imgur_api.dll`. Here is my shitty XML:
 
 ```xml
 <ApiMonitor>
@@ -346,9 +346,9 @@ There are not any official guides on how to write such XML definitions. I just e
 </ApiMonitor>
 ```
 
-The file src code: [@TheBestTvarynka/trash-code/@a333b128/debugging-with-api-monitor/imgur_api.xml](https://github.com/TheBestTvarynka/trash-code/blob/a333b128ac66a128a4a98c7fb503004812053cb8/debugging-with-api-monitor/imgur_api.xml).The code above looks pretty simple and easy to understand, but I'll give you some advice on how not to face problems:
+The file with the src code: [@TheBestTvarynka/trash-code/@a333b128/debugging-with-api-monitor/imgur_api.xml](https://github.com/TheBestTvarynka/trash-code/blob/a333b128ac66a128a4a98c7fb503004812053cb8/debugging-with-api-monitor/imgur_api.xml). The code above looks pretty simple and easy to understand, but I'll give you some advice on how not to face problems:
 
-* If the loaded definitions in the API monitor do have not all functions or don't have any at all, then they are probably invalid and you need to fix the XML. The API Monitor will not show you any message about what does wrong. For example, it'll not say you that the function uses an unknown param type. It'll just ignore it.
+* If the loaded definitions have not all functions or don't have any at all, then they are probably invalid and you need to fix the XML. The API Monitor will not show you any message about what does wrong. For example, it'll not say you that the function uses an unknown param type. It'll just ignore this function.
 * You can split types and variables definitions into `.h.xml` and `.xml` files. The idea is obvious: you can include `.h.xml` files in other API definitions. In such a way you can reduce the code duplication.
 * If you have the defined `MyStruct` structure, that does not mean that you automatically have the `MyStruct*` and `MyStruct**` pointer types. You should also define pointer types as I did in the code above for the `FfiComment**`.
 * Why did I use the `char` instead of `BOOL`? The defined `BOOL` type has a 4-byte len but I need only one byte:
@@ -368,7 +368,7 @@ So I decided just to use `char`. It's enough for us.
 
 ## Debugging
 
-> *How to tell API Monitor about our new API?*
+> *How to tell the API Monitor about our new API?*
 
 Just place the file into the `API` directory. On the next API Monitor start it'll load all API definitions again, including our new one. For example:
 
