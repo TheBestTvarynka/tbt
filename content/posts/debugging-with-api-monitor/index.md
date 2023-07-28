@@ -296,9 +296,103 @@ Now we have working program that uses custom external DLL. Perfect. The most int
 
 ## Writing XML definitions
 
+There are not any official guides on how to write such XML definitions. I just explored existing XML in the `C:\Program Files\rohitab.com\API Monitor\API` directory and wrote my own for the `imgur_api.dll`. Here is my shitty XML:
+
+```xml
+<ApiMonitor>
+    <Include Filename="Headers\windows.h.xml" />
+    <Module Name="imgur_api.dll" CallingConvention="STDCALL" Category="Imgur">
+        <Variable Name="FfiCommentData" Type="Struct">
+            <Field Type="UINT64" Name="id" />
+            <Field Type="const char*" Name="image_id" />
+            <Field Type="const char*" Name="comment" />
+            <Field Type="const char*" Name="author" />
+            <Field Type="UINT64" Name="author_id" />
+            <Field Type="char" Name="on_album" />
+            <Field Type="const char*" Name="album_cover" />
+            <Field Type="UINT32" Name="ups" />
+            <Field Type="UINT32" Name="downs" />
+            <Field Type="UINT32" Name="points" />
+            <Field Type="UINT32" Name="datetime" />
+            <Field Type="UINT64" Name="parent_id" />
+            <Field Type="char" Name="deleted" />
+            <Field Type="char" Name="is_voted" />
+            <Field Type="char" Name="vote" />
+            <Field Type="const char*" Name="platform" />
+            <Field Type="char" Name="has_admin_badge" />
+            <Field Type="UINT64*" Name="children" />
+            <Field Type="UINT32" Name="children_len" />
+        </Variable>
+        <Variable Name="FfiComment" Type="Struct">
+            <Field Type="FfiCommentData" Name="data" />
+            <Field Type="UINT32" Name="status" />
+            <Field Type="char" Name="success" />
+        </Variable>
+        <Variable Name="FfiComment*" Type="Pointer" Base="FfiComment" />
+        <Variable Name="FfiComment**" Type="Pointer" Base="FfiComment*" />
+
+        <Api Name="ImgurInitClient">
+            <Param Type="const char*" Name="client_id" />
+            <Param Type="const char*" Name="client_secret" />
+            <Return Type="void*" />
+        </Api>
+        <Api Name="ImgurGetComment">
+            <Param Type="void*" Name="context" />
+            <Param Type="unsigned long" Name="comment_id" />
+            <Param Type="FfiComment**" Name="comment" />
+            <Return Type="UINT32" />
+        </Api>
+    </Module>
+</ApiMonitor>
+```
+
+The file src code: [@TheBestTvarynka/trash-code/@a333b128/debugging-with-api-monitor/imgur_api.xml](https://github.com/TheBestTvarynka/trash-code/blob/a333b128ac66a128a4a98c7fb503004812053cb8/debugging-with-api-monitor/imgur_api.xml).The code above looks pretty simple and easy to understand, but I'll give you some advice on how not to face problems:
+
+* If the loaded definitions in the API monitor do have not all functions or don't have any at all, then they are probably invalid and you need to fix the XML. The API Monitor will not show you any message about what does wrong. For example, it'll not say you that the function uses an unknown param type. It'll just ignore it.
+* You can split types and variables definitions into `.h.xml` and `.xml` files. The idea is obvious: you can include `.h.xml` files in other API definitions. In such a way you can reduce the code duplication.
+* If you have the defined `MyStruct` structure, that does not mean that you automatically have the `MyStruct*` and `MyStruct**` pointer types. You should also define pointer types as I did in the code above for the `FfiComment**`.
+* Why did I use the `char` instead of `BOOL`? The defined `BOOL` type has a 4-byte len but I need only one byte:
+
+```xml
+<!-- C:\Program Files\rohitab.com\API Monitor\API\Headers\common.h.xml -->
+<Variable Name="BOOL" Type="Integer" Size="4">
+    <Enum DefaultName="TRUE">
+        <Set Name="TRUE"    Value="1" />
+        <Set Name="FALSE"   Value="0" />
+    </Enum>
+    <Success Return="NotEqual" Value="0" />
+</Variable>
+```
+
+So I decided just to use `char`. It's enough for us.
+
 ## Debugging
 
-## Fixing XML definitions and debugging
+> *How to tell API Monitor about our new API?*
+
+Just place the file into the `API` directory. On the next API Monitor start it'll load all API definitions again, including our new one. For example:
+
+```
+C:\Program Files\rohitab.com\API Monitor\API\Imgur\imgur_api.xml
+```
+
+If you did everything right, then you should get smth like this:
+
+{{ img(src="imgur_api_filter.png" alt="Imgur API filter") }}
+
+Now let's debug the test application we wrote before. Start it as a usual process monitoring. Here is my result:
+
+{{ img(src="monitoring_summary.png" alt="Monitoring summary") }}
+
+Now we can fully observe what has been passed into and returned from our functions. Also, we compare the API Monitor values with those printed in the terminal to ensure that we did nothing wrong in the XML definitions.
+
+{{ img(src="imgur_init_client.png" alt="ImgurInitClient function call") }}
+
+On the screenshot above you can see secrets passed to the init function. Just like I saw passwords and emails during debugging the Windows SSPI :astonished:.
+
+{{ img(src="imgur_get_comment.png" alt="ImgurGetComment function call") }}
+
+Cool :sunglasses:. The values are the same as in the terminal.
 
 # References & final note
 
