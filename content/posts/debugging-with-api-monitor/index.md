@@ -10,6 +10,7 @@ tags = ["debugging", "api-monitor", "rust"]
 keywords = "Rust, API Monitor, Debugging, API"
 mermaid = true
 toc = true
+thumbnail = "debugging-with-api-monitor-thumbnail.png"
 +++
 
 The [API monitor](http://www.rohitab.com/apimonitor) speaks for itself. It's a great tool for the system API calls debugging, monitoring, information extraction, exploring. Especially in cases when you don't know how exactly API works.
@@ -130,7 +131,7 @@ Okay, enough talking, time to fix the code:
 
 **Note.** You will have other paths if you installed the API Monitor in the non-default location.
 
-You can compare old and new XML and see the difference. Now all should work. Let's try again to record the API calls. Here is my result:
+You can compare old and new XML and see the difference. Now all should work. Let's try again to record API calls. Here is my result:
 
 {{ img(src="scardtransmit_with_buffer.png" alt="SCardTransmit with buffer") }}
 
@@ -140,16 +141,16 @@ Congratulations :hibiscus: . Now it works well and we can observe input and outp
 
 # What if we have a custom DLL to monitor?
 
-Firstly, I were not planned to write this section. But if I touched fixing XML definitions then it's obviously be fun to write definitions for out custom library and try to debug it.
+Firstly, I was not planned to write this section. But if I touched fixing XML definitions then it's obviously fun to write definitions for our custom library and try to debug it.
 
-But before actual debugging, let's write the dll itself. I suggest a simple task:
+But before actual debugging, let's write the program and dll itself. I suggest a simple task:
 
-Look at this site: [https://imgur.com](https://imgur.com). *Imgur* is an American online image sharing and image hosting service. It has an [API](https://apidocs.imgur.com/). Let's write a library that encapsulates API calls and provides us a simple interface for communication with Imgur. I plan to implement only two functions:
+Look at this site: [https://imgur.com](https://imgur.com). *Imgur* is an American online image-sharing and image-hosting service. It has an [API](https://apidocs.imgur.com/). Let's write a library that encapsulates API calls and provides us with a simple interface for communication with Imgur. I plan to implement only two functions:
 
 * `ImgurInitClient`: initializes the Imgur client (or context).
 * `ImgurGetComment`: retrieves the comment information based on its id.
 
-And in order to make more "real" example, I'll pack Rust code into the dll and call its functions from the C++ code.
+And in order to make a more "real" example, I'll pack Rust code into the dll and call its functions from the C++ code.
 
 {% mermaiddiagram() %}
 flowchart TD
@@ -162,9 +163,9 @@ end
 
 ## Write a program and dll
 
-**Note:** this section contains a lot of code. There is no point to read it very carefully. You should just have a rough idea what it does.
+**Note:** this section contains a lot of code. There is no point to read it very carefully. You should just have a rough idea of what it does.
 
-Good. We have a purpose but don't have any obstacles. Firstly, we need to write a pure Rust implementation. There is no point to explain it in details, so I just pase the code below:
+Good. We have a purpose but don't have any obstacles. Firstly, we need to write a pure Rust implementation. There is no point to explain it in detail, so I just paste the code below:
 
 ```rust
 /// The Imgur API client
@@ -237,13 +238,13 @@ pub unsafe extern "C" fn ImgurGetComment(context: *mut c_void, comment_id: c_ulo
 
 And of course, the full `imgur-api-dll` code you can find here: [@TheBestTvarynka/trash-code/@c42f4d80/debugging-with-api-monitor/imgur-api-dll](https://github.com/TheBestTvarynka/trash-code/tree/c42f4d809849e9475e0d3fb72afbc2d0d18b6732/debugging-with-api-monitor/imgur-api-dll). When you build this crate, you'll find the `imgur_api.dll` file in the `target/debug/` directory.
 
-Good. And the last part is a C++ code that loads our dll and calls it's functions. Before it we need to generate the `.h` file with out structures and functions. Sure, with such a small example, we can do it manually. But I wanna show you an easier way: I'll use the [`cbindgen`](https://github.com/mozilla/cbindgen). Run the following command in the terminal from the `imgur-api-dll` crate location:
+Good. And the last part is a C++ code that loads our dll and calls its functions. Before it, we need to generate the `.h` file with our structures and functions. Sure, with such a small example, we can do it manually. But I wanna show you an easier way: I'll use the [`cbindgen`](https://github.com/mozilla/cbindgen). Run the following command in the terminal from the `imgur-api-dll` crate location:
 
 ```bash
 cbindgen --crate imgur-api-dll --output imgur_api.h
 ```
 
-As the result, you'll get the `imgur_api.h` file ready for using in the C++ project. I'll need the functions types, so I added them manually:
+As a result, you'll get the `imgur_api.h` file ready for use in the C++ project. I'll need the types of functions, so I add them manually:
 
 ```c++
 typedef void* (ImgurInitClientFn)(const char*, const char*);
@@ -252,7 +253,7 @@ typedef uint32_t (ImgurGetCommentFn)(void*, unsigned long long, FiiComment**);
 
 The full `imgur_api.h` file: [@TheBestTvarynka/trash-code/@a333b128/debugging-with-api-monitor/imgur-api-dll/imgur_api.h](https://github.com/TheBestTvarynka/trash-code/blob/a333b128ac66a128a4a98c7fb503004812053cb8/debugging-with-api-monitor/imgur-api-dll/imgur_api.h).
 
-Finally, we can write our C++ program. I'm not much a C++ dev, so don't judge me please.
+Finally, we can write our C++ program. I'm not much of a C++ dev, so don't judge me, please.
 
 ```c++
 // code listed below is simplified and some lines are omitted
@@ -274,8 +275,7 @@ if (!status) {
     cout << "Success! Comment data:\n";
     cout << "id: " << comment->data.id << endl;
     // some lines are omitted
-}
-else {
+} else {
     cout << "Error: " << status << endl;
 }
 ```
@@ -284,7 +284,7 @@ else {
 
 Read the full src code here: [@TheBestTvarynka/trash-code/@a333b128/debugging-with-api-monitor/TestImgurDll](https://github.com/TheBestTvarynka/trash-code/tree/a333b128ac66a128a4a98c7fb503004812053cb8/debugging-with-api-monitor/TestImgurDll). Basically, our program has three main parts:
 
-* Initialization: here we obtain module handle, functions pointers.
+* Initialization: here we obtain module handle and pointers of functions.
 * Comment information retrieving.
 * Print the result of the execution.
 
@@ -292,11 +292,11 @@ Pretty simple, I think. If you run this program, you should get smth like this:
 
 {{ img(src="TestImgurApiDll-execution.png" alt="TestImgurApiDll execution") }}
 
-Now we have working program that uses custom external DLL. Perfect. The most interesting and fun part begins in the next section.
+Now we have a working program that uses custom external DLL. Perfect. The most interesting and fun part begins in the next section.
 
 ## Writing XML definitions
 
-There are no any official guides on how to write such XML definitions. I just explored existing XMLs in the `C:\Program Files\rohitab.com\API Monitor\API` directory and wrote my own for the `imgur_api.dll`. Here is my shitty XML:
+There are no official guides on how to write such XML definitions. I just explored existing XMLs in the `C:\Program Files\rohitab.com\API Monitor\API` directory and wrote my own for the `imgur_api.dll`. Here is my shitty XML:
 
 ```xml
 <ApiMonitor>
@@ -346,9 +346,13 @@ There are no any official guides on how to write such XML definitions. I just ex
 </ApiMonitor>
 ```
 
+> *Why "shitty"?*
+
+I don't like XML at all. So, for me, every XML is shitty.
+
 The file with the src code: [@TheBestTvarynka/trash-code/@a333b128/debugging-with-api-monitor/imgur_api.xml](https://github.com/TheBestTvarynka/trash-code/blob/a333b128ac66a128a4a98c7fb503004812053cb8/debugging-with-api-monitor/imgur_api.xml). The code above looks pretty simple and easy to understand, but I'll give you some advice on how not to face problems:
 
-* If the loaded definitions have not all functions or don't have any at all, then they are probably invalid and you need to fix the XML. The API Monitor will not show you any message about what does wrong. For example, it'll not say you that the function uses an unknown param type. It'll just ignore this function.
+* If the loaded definitions don't have all functions or don't have any at all, then they are probably invalid and you need to fix the XML. The API Monitor will not show you any message about what does wrong. For example, it'll not tell you that the function uses an unknown param type. It'll just ignore this function.
 * You can split types and variables definitions into `.h.xml` and `.xml` files. The idea is obvious: you can include `.h.xml` files in other API definitions. In such a way you can reduce the code duplication.
 * If you have the defined `MyStruct` structure, that does not mean that you automatically have the `MyStruct*` and `MyStruct**` pointer types. You should also define pointer types as I did in the code above for the `FfiComment**`.
 * Why did I use the `char` instead of `BOOL`? The defined `BOOL` type has a 4-byte len but I need only one byte:
@@ -388,7 +392,7 @@ Now we can fully observe what has been passed into and returned from our functio
 
 {{ img(src="imgur_init_client.png" alt="ImgurInitClient function call") }}
 
-On the screenshot above you can see secrets passed to the init function. Just like I saw passwords and emails during debugging the Windows SSPI :astonished:.
+On the screenshot above you can see secrets passed to the init function. Just like I saw passwords and emails during debugging the Windows SSPI :stuck_out_tongue_winking_eye:.
 
 {{ img(src="imgur_get_comment.png" alt="ImgurGetComment function call") }}
 
@@ -401,4 +405,4 @@ Cool :sunglasses:. The values are the same as in the terminal.
 3. [Rustonomicon - Foreign Function Interface](https://doc.rust-lang.org/nomicon/ffi.html).
 4. [The (unofficial) Rust FFI Guide](https://michael-f-bryan.github.io/rust-ffi-guide/).
 
-Conclusions.
+Sometimes our tools are capable of much more than we think. Maybe something you're searching for is just around the corner.
