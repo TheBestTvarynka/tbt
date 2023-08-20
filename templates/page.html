@@ -46,6 +46,19 @@
     {{- macros::meta_post(page=page, config=config) }}
     {%- endif %}{%- endif %}
 
+    {% if config.mode != "serve" %}
+      <script src="https://utteranc.es/client.js"
+        repo="TheBestTvarynka/tbt"
+        issue-term="title"
+        label="comments"
+        theme="preferred-color-scheme"
+        crossorigin="anonymous"
+        async>
+      </script>
+    {% else %}
+      Comments are not supported in the `serve` mode.
+    {% endif %}
+
     {%- block page_footer %}
     {{- macros::footer(page=page) }}
     {%- endblock page_footer %}
