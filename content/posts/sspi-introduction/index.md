@@ -1,5 +1,6 @@
 +++
 title = "SSPI introduction"
+description = "If you know nothing about [Windows SSPI](https://learn.microsoft.com/en-us/windows/win32/rpc/security-support-provider-interface-sspi-) and want to start working with it, this article will benefit you."
 date = 2023-04-27
 draft = false
 
