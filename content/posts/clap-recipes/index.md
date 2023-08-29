@@ -343,7 +343,7 @@ enum Command {
 }
 ```
 
-Okay, we have two file sources: file or link. And we use [ArgGroud](https://docs.rs/clap/latest/clap/struct.ArgGroup.html) to specify that the user must specify only one of them: either file or link. And here is the demo:
+Okay, we have two file sources: file or link. And we use [ArgGroup](https://docs.rs/clap/latest/clap/struct.ArgGroup.html) to specify that the user must specify only one of them: either file or link. And here is the demo:
 
 ```bash
 ./img-tool upload --help
