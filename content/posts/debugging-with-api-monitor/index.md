@@ -1,5 +1,6 @@
 +++
 title = "Debugging with API Monitor"
+description = "If you have problems with existing [API Monitor](http://www.rohitab.com/apimonitor) XML definitions or want to write your own, then this article is for you."
 date = 2023-07-28
 draft = false
 

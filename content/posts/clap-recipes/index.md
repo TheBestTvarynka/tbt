@@ -1,5 +1,6 @@
 +++
 title = "Rust Clap recipes"
+description = "The current article is basically recipes for solving unusual [`clap`](https://github.com/clap-rs/clap) configuration cases."
 date = 2023-06-15
 draft = false
 

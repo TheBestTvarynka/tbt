@@ -38,7 +38,7 @@
         {%- if page.summary %}
           {{ page.summary | markdown(inline=true) | safe }}
         {%- elif page.description %}
-          {{ page.description | safe }}
+          {{ page.description | markdown(inline=true) | safe }}
         {%- elif page.content %}
           {{ page.content | striptags | truncate(length=150) | safe }}
         {%- elif page.extra.static_thumbnail %}
