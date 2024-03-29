@@ -4,7 +4,7 @@ date = 2023-07-28
 draft = false
 
 [taxonomies]
-tags = ["debugging", "api-monitor", "rust"]
+tags = ["debugging", "api-monitor", "rust", "windows"]
 
 [extra]
 keywords = "Rust, API Monitor, Debugging, API"
