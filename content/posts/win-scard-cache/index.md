@@ -1,13 +1,13 @@
 +++
 title = "Windows smart card cache"
-date = 2024-04-15
+date = 2024-04-04
 draft = false
 
 [taxonomies]
 tags = ["debugging", "windows", "rust", "scard"]
 
 [extra]
-keywords = "Rust, API Monitor, Debugging, API, Windows, smart card"
+keywords = "Rust, API Monitor, Debugging, API, Windows, Smart Card"
 toc = true
 thumbnail = "win-scard-caches-thumbnail.png"
 +++
