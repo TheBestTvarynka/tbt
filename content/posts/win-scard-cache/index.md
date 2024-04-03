@@ -9,6 +9,7 @@ tags = ["debugging", "windows", "rust", "scard"]
 [extra]
 keywords = "Rust, API Monitor, Debugging, API, Windows, smart card"
 toc = true
+thumbnail = "win-scard-caches-thumbnail.png"
 +++
 
 # Getting Started
@@ -78,7 +79,7 @@ For the further work, only two instruments will be used:
 
 # Let's start the journey
 
-I suppose the whole debugging process is boring for you, so I'll show relevant reversed parts of the `msclmd.dll` with small descriptions. If you need only resulting cache items format (structure), then you should skip next sections and jump right to the [Final results](#final-results) section.
+I suppose the whole debugging process is boring for you, so I'll show relevant reversed parts of the `msclmd.dll` with small descriptions. If you need only resulting cache items format (structure), then you should skip next sections and jump right to the [implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L146-L394).
 
 ## `Cached_CardmodFile\Cached_Pin_Freshness`
 
@@ -218,7 +219,7 @@ The current cache item describes one or more such container records. The `value_
 
 ## `Cached_CardmodFile\Cached_CMAPFile`
 
-This one is almost the same as [the previous one](#cached-generalfile-mscp-cmapfile) but without the `CARD_FILE_HEADER` structure at the start of the cache file. You can just remove the first 16 bytes from the `Cached_GeneralFile/mscp/cmapfile` cache file and you'll get this one. [Example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L226-L240).
+This one is almost the same as [the previous one](#cached-generalfile-mscp-cmapfile) but without the `CARD_FILE_HEADER` structure at the start of the cache file. You can just remove the first 16 bytes from the `Cached_GeneralFile/mscp/cmapfile` cache file and you'll get this one. [Example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L226-L240). The driver (`msclmd.dll`) usually uses this cache file to find the needed card container specified in the credentials. For example, `basecsp!I_ContainerMapFind`, or `basecsp!ContainerMapFindContainer`, or `basecsp!FindCard` functions.
 
 ## `Cached_ContainerProperty_PIN Identifier_0`
 
@@ -264,23 +265,74 @@ typedef struct _RSAPUBKEY {
 
 *Note.* If the `public_key_modulus` is smaller than the specified key length (for example, by one byte), then it should be padded with zeroes to match the key length.
 
+> _But you wrote above the smart card can have **more than one** key container. Which one should we use here?_
+
+It's a trick question. I don't know :disappointed:. In my experience, I was working with smart cards that have only one key container.
+
 ## `Cached_GeneralFile/mscp/kxc00`
+
+In short, this cache file contains a compressed DER-encoded certificate usinf ZLIB compression. [Example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L313-L330). [Compression](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/compression.rs#L11). Of course, the `value_len` of the `CARD_FILE_HEADER` structure depends on the compressed data length. So, move on. The actual data has the following format:
+
+```c
+// This structure is assembled by me
+typedef struct _CONTAINER_INFO_DATA {
+  int16 flags;
+  int16 uncompressed_cert_len;
+  BYTE[] compressed_cert_len;
+} CONTAINER_INFO_DATA;
+
+```
+
+I suppose the first two bytes should indicate if the certificate is compressed or not. But I didn't find any evidence about it and just used extracted values from the real smart card.
+
+> _Again. What certificate should we use?_
+
+This time I know :stuck_out_tongue_closed_eyes:. In the specification, `kxc00` is _key exchange cert 0_.
 
 ## `Cached_CardProperty_Capabilities_0`
 
-## `Cached_CardProperty_Key Sizes_2`
+This cache file describes the card and card-specific minidriver combination for the functionality that is provided at this level, such as a certificate or file compression. The `value_len` is equal to 12 in the `CARD_FILE_HEADER` structure and those 12 bytes represent [the `CARD_CAPABILITIES` structure](https://github.com/selfrender/Windows-Server-2003/blob/5c6fe3db626b63a384230a1aa6b92ac416b0765f/ds/security/csps/wfsccsp/inc/cardmod.h#L138-L152):
+
+```c
+#define CARD_CAPABILITIES_CURRENT_VERSION 1
+
+typedef struct _CARD_CAPABILITIES
+{
+    // The version of the structure that is being used.
+    DWORD   dwVersion;
+    // Set TRUE to indicate that the card minidriver implements its own compression of certificates.
+    BOOL    fCertificateCompression;
+    // Set TRUE to indicate that the card can generate keys.
+    BOOL    fKeyGen;
+} CARD_CAPABILITIES, *PCARD_CAPABILITIES;
+```
+
+[Example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L331-L343). (_Just a reminder. In Windows, the `BOOL` type is 4-byte long_ :confused:)
 
 ## `Cached_CardProperty_Key Sizes_1`
 
-## Container name
+This cache file describes the different key length values that are available. The `value_len` is equal to 20 in the `CARD_FILE_HEADER` structure and those 20 bytes represent [the `CARD_KEY_SIZES` structure](https://github.com/selfrender/Windows-Server-2003/blob/5c6fe3db626b63a384230a1aa6b92ac416b0765f/ds/security/csps/wfsccsp/inc/cardmod.h#L577-L591):
 
-# Final results
+```c
+#define CARD_KEY_SIZES_CURRENT_VERSION 1
 
-sc
+typedef struct _CARD_KEY_SIZES
+{
+    DWORD dwVersion;
+    DWORD dwMinimumBitlen;
+    DWORD dwDefaultBitlen;
+    DWORD dwMaximumBitlen;
+    DWORD dwIncrementalBitlen;
+} CARD_KEY_SIZES, *PCARD_KEY_SIZES;
+```
+
+[Example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L364-L381). Sometimes the driver can ask for the `Cached_CardProperty_Key Sizes_2` cache item. I'm not sure what this number means. Maybe it depends on the key container, maybe on some algorithm id. IDK :sweat:
 
 # Conclusion
 
-c
+I'm not sure what to conclude. The only thing that stuck in my head is that anything related to smart cards is complex, hard to implement/understand, or find documentation. Anyway, we have no other choice than to live with what we have and try to improve it :blush:
+
+I hope if one day someone is stuck with a similar problem as me, then they'll find this article and use it as a reference. I just don't know who else might need such a detailed description of smart card cache files :sweat_smile:
 
 # Doc, references, code
 
@@ -288,5 +340,5 @@ c
 2. [`winscard.h`](https://learn.microsoft.com/en-us/windows/win32/api/winscard/).
 3. [Smart Card Minidrivers](https://learn.microsoft.com/en-us/windows-hardware/drivers/smartcard/smart-card-minidrivers).
 4. [Smart Card Minidriver Specification](https://learn.microsoft.com/en-us/previous-versions/windows/hardware/design/dn631754(v=vs.85)).
-5. Implemented smart card caches: [`scard_context.rs`](https://github.com/Devolutions/sspi-rs/blob/eee2c0b481e63d660cb0cff2c99599fb30b5dd0d/crates/winscard/src/scard_context.rs#L146-L394).
+5. Implemented smart card caches: [`scard_context.rs`](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L146-L394).
 6. [Time Travel Debugging](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/time-travel-debugging-overview).
