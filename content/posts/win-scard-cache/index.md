@@ -23,7 +23,7 @@ You can have questions like *"How can we replace the original dll"*, *"What is t
 ## Goals
 
 * A brief overview of the smart card architecture in Windows.
-* Explain smart card cache items for [**PIV**](https://www.idmanagement.gov/university/piv/) smart cards in Windows.
+* Explain some smart card cache items for [**PIV**](https://www.idmanagement.gov/university/piv/) smart cards in Windows.
 * Fun :partying_face:.
 
 Who should read this article:
@@ -37,11 +37,11 @@ Who should read this article:
 
 # Overview
 
-In Windows, [WinSCard](https://learn.microsoft.com/en-us/windows/win32/api/winscard/) is the lowest accessible API for communicating with smart cards. You operate only using handles (`SCARDCONTEXT`/`SCARDHANDLE`/etc), raw [APDU](https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit)s ([SCardTransmit](https://learn.microsoft.com/en-us/windows/win32/api/winscard/nf-winscard-scardtransmit) function), and a bunch of other low-level functions. If you look at the CSP and KSP-based architecture diagram, you'll see WinScard almost at the bottom of the picture:
+In Windows, [WinSCard](https://learn.microsoft.com/en-us/windows/win32/api/winscard/) is the lowest accessible API for communicating with smart cards. You operate only using handles (`SCARDCONTEXT`/`SCARDHANDLE`/etc), raw [APDU](https://en.wikipedia.org/wiki/Smart_card_application_protocol_data_unit)s ([SCardTransmit](https://learn.microsoft.com/en-us/windows/win32/api/winscard/nf-winscard-scardtransmit) function), and a bunch of other low-level functions. If you look at [the CSP and KSP-based architecture diagram](https://learn.microsoft.com/en-us/windows/security/identity-protection/smart-cards/smart-card-architecture#base-csp-and-ksp-based-architecture-in-windows), you'll see WinScard almost at the bottom of the picture:
 
 [![](https://learn.microsoft.com/en-us/windows/security/identity-protection/smart-cards/images/sc-image206.gif)](https://learn.microsoft.com/en-us/windows/security/identity-protection/smart-cards/smart-card-architecture#base-csp-and-ksp-based-architecture-in-windows)
 
-Let's analyze this diagram above. Usually, when you deal with any crypto operations in Windows, you use some high-level API - [CryptoAPI](https://learn.microsoft.com/en-us/windows/win32/seccrypto/cryptoapi-system-architecture). But the CryptoAPI is just a high-level API and every [CSP](https://en.wikipedia.org/wiki/Cryptographic_Service_Provider) implements it. In the case of smart cards, the corresponding CSP (`basecsp.dll`, in our case) can not contain the CryptoAPI implementation because all crypto operations should be performed on the security device. This is why BaseCSP uses (depends) on the smart card minidriver. Such a minidriver translates high-level functions into WinSCard API calls. Nothing more.
+Let's analyze this diagram above. Usually, when you deal with any crypto operations in Windows, you use some high-level API - [CryptoAPI](https://learn.microsoft.com/en-us/windows/win32/seccrypto/cryptoapi-system-architecture). But the CryptoAPI is just a high-level API and every [CSP](https://en.wikipedia.org/wiki/Cryptographic_Service_Provider) implements it. In the case of smart cards, the corresponding CSP (`basecsp.dll`, in our case) can not contain the CryptoAPI implementation because all crypto operations should be performed on the security device. This is why BaseCSP uses (depends on) the smart card minidriver. Such a minidriver translates high-level functions into WinSCard API calls. Nothing more.
 
 Usually, every smart card vendor ships its smart card driver (you can see it on the diagram). The Windows itself contains two smart card drivers:
 
@@ -57,8 +57,8 @@ It was a small lie :sweat_smile:. I mean, yes, it's true, but those two drivers 
 I have a few reasons for it:
 
 * No matter how good our WinSCard implementation is, authentication will fail without a working cache.
-* Only a few cache items are described in the Window's minidriver specification. Many of them are undocumented and unknown.
-* It was the hardest part to debug and implement :stuck_out_tongue_closed_eyes:.
+* Only a few cache items are described in the Window's minidriver specification. Many of them are undocumented and unknown (or known but the final file structure is not clear).
+* It was the hardest part to debug and implement :stuck_out_tongue_closed_eyes:. It took me a few months.
 
 Firstly, I thought I can found cache items format in the specification. But I was wrong. Secondly, I was astonished that I didn't found any information about them in the Internet. In the result, it took me more then month to properly reverse/debug `msclmd.dll` and extract all needed information about scard cache items. And I decided to write an article you are reading now.
 
@@ -80,6 +80,15 @@ For the further work, only two instruments will be used:
 # Let's start the journey
 
 I suppose the whole debugging process is boring for you, so I'll show relevant reversed parts of the `msclmd.dll` with small descriptions. If you need only resulting cache items format (structure), then you should skip next sections and jump right to the [implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L146-L394).
+
+At some point in time, the `msclmd.dll` calls the [`SCardReadCacheW`](https://learn.microsoft.com/en-us/windows/win32/api/winscard/nf-winscard-scardreadcachew) function to extract some information from the smart card cache. What data should we return? What format does the data (cache file) have? The next chapters contain answers to those questions.
+
+You can use the following material in two cases:
+
+* You are developing your own `winscard.dll` replacement.
+* You are using the WinSCard API (maybe developing your minidriver) under Windows and want to know what the `SCardReadCacheW` function returns.
+
+Otherwise, it's just a fun reading for you. Enjoy :kissing_closed_eyes:
 
 ## `Cached_CardmodFile\Cached_Pin_Freshness`
 
