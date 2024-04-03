@@ -94,7 +94,7 @@ typedef struct _CARD_CACHE_FILE_FORMAT
 } CARD_CACHE_FILE_FORMAT, *PCARD_CACHE_FILE_FORMAT;
 ```
 
-The actual cache file is just one-byte number that represents a PIN freshness counter. If you want, it can be two-byte value, but the value will be casted to one-byte. [Implementation example](https://github.com/Devolutions/sspi-rs/blob/master/crates/winscard/src/scard_context.rs#L383-L386):
+The actual cache file is just one-byte number that represents a PIN freshness counter. If you want, it can be two-byte value, but the value will be casted to one-byte. [Implementation example](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L383-L386):
 
 ```rust
 const PIN_FRESHNESS: [u8; 2] = [0x00, 0x00];
@@ -119,7 +119,7 @@ But the `CARD_CACHE_FILE_FORMAT` structure creation is not just cache items copy
 
 ## `Cached_CardmodFile\Cached_File_Freshness`
 
-We are already familiar with freshness counters, so I skip this cache item introduction and jump to [the implementation](https://github.com/Devolutions/sspi-rs/blob/master/crates/winscard/src/scard_context.rs#L387-L390):
+We are already familiar with freshness counters, so I skip this cache item introduction and jump to [the implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L387-L390):
 
 ```rust
 const FILE_FRESHNESS: [u8; 2] = [0x0b, 0x00];
@@ -134,7 +134,7 @@ Note. The `[0x0b, 0x00]` is almost random value. The freshness counter is just a
 
 ## `Cached_CardmodFile\Cached_Container_Freshness`
 
-And finally, the container freshness counter. [Code](https://github.com/Devolutions/sspi-rs/blob/master/crates/winscard/src/scard_context.rs#L391-L394):
+And finally, the container freshness counter. [Code](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L391-L394):
 
 ```rust
 const CONTAINER_FRESHNESS: [u8; 2] = [0x01, 0x00];
@@ -151,7 +151,7 @@ cache.insert(
 
 ![](CARD_CACHE_FILE_FORMAT_creation.png)
 
-> *What is `activity_count`?*
+> *What is an `activity_count`?*
 
 It's a result value of the `msclmd!I_GetCardActivityCount` function. Here is how it calculated:
 
@@ -161,17 +161,108 @@ The activity counter is calculated based on the `dwEventState` value returned fr
 
 ## `Cached_CardProperty_Read Only Mode_0`
 
+To make further explanations easier, I introduce the cache value header:
+
+```c
+typedef struct _CARD_FILE_HEADER
+{
+    CARD_CACHE_FILE_FORMAT file_format;
+    uint16 padding1;
+    uint16 padding2;
+    uint16 padding3;
+    uint32 value_len;
+} CARD_FILE_HEADER;
+```
+
+`value_len` bytes are placed right after this header. I can assume that padding bytes also have a meaning but in my practice, they are always equal to zero and I didn't find any application for them.
+
+This is a general layout for cache items related to the PIV smart card. Now we can finally see, how freshness and activity counters affect other cache files.
+
+In the case of the current cache item, the `value_len` is 4, and value bytes represent the `BOOL` flag. [Example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L171-L181). The meaning of this flag hides in the specification. It represents the `CP_CARD_READ_ONLY` card property:
+
+> *If True, all write operations are blocked at the Base CSP layer. This flag also affects the data cache. If the card indicates that it is read-only, the Base CSP/KSP does not write to the cardcf file.*
+
 ## `Cached_CardProperty_Cache Mode_0`
+
+The structure of this cache item is the same as in [the previous one](#cached-cardproperty-read-only-mode-0). The `value_len` is 4, and value bytes represent the `DWORD` number. [Example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L182-L192). It corresponds to the `CP_CARD_CACHE_MODE` card property and can have one of the possible values:
+
+```c
+#define CP_CACHE_MODE_GLOBAL_CACHE      1
+#define CP_CACHE_MODE_SESSION_ONLY      2
+#define CP_CACHE_MODE_NO_CACHE          3
+``` 
 
 ## `Cached_CardProperty_Supports Windows x.509 Enrollment_0`
 
+The `value_len` is equal to 4 in the `CARD_FILE_HEADER` structure and those 4 bytes represent the `BOOL` value. [Example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L193-L203). The meaning of this flag is the following:
+
+> *Indicates whether Windows PKI should be allowed to write or renew certificates on the card. This should be used to avoid unexpected results because of a lack of support for multiple PINs in Windows PKI enrollment client.*
+
 ## `Cached_GeneralFile/mscp/cmapfile`
+
+It is worth noting that smart cards can have a few [key containers](https://stackoverflow.com/a/2528335/15125407). And here every card container are represented in the [`CONTAINER_MAP_RECORD`](https://github.com/selfrender/Windows-Server-2003/blob/5c6fe3db626b63a384230a1aa6b92ac416b0765f/ds/security/csps/wfsccsp/inc/basecsp.h#L104-L110) structure:
+
+```c
+#define MAX_CONTAINER_NAME_LEN 40
+
+typedef struct _CONTAINER_MAP_RECORD
+{
+    WCHAR wszGuid [MAX_CONTAINER_NAME_LEN];
+    BYTE bFlags;        
+    WORD wSigKeySizeBits;
+    WORD wKeyExchangeKeySizeBits;
+} CONTAINER_MAP_RECORD, *PCONTAINER_MAP_RECORD;
+```
+
+The current cache item describes one or more such container records. The `value_len` is equal to *`0x56` (size of the `CONTAINER_MAP_RECORD`) * amount of container records structures*. [Example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L204-L225).
 
 ## `Cached_CardmodFile\Cached_CMAPFile`
 
+This one is almost the same as [the previous one](#cached-generalfile-mscp-cmapfile) but without the `CARD_FILE_HEADER` structure at the start of the cache file. You can just remove the first 16 bytes from the `Cached_GeneralFile/mscp/cmapfile` cache file and you'll get this one. [Example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L226-L240).
+
 ## `Cached_ContainerProperty_PIN Identifier_0`
 
+The `value_len` is equal to 4 in the `CARD_FILE_HEADER` structure and those 4 bytes represent the `DWORD` value. [Example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L241-L251). As I understand from the specification, the PIN identifier is associated with the role.
+
+```c
+typedef     DWORD                      PIN_ID, *PPIN_ID;
+
+#define     ROLE_EVERYONE              0
+#define     ROLE_USER                  1
+#define     ROLE_ADMIN                 2
+```
+
 ## `Cached_ContainerInfo_00`
+
+This cache file describes the key container for more information about which keys are present. The `value_len` of the `CARD_FILE_HEADER` structure depends on the key inside of this container. You'll see it further. Here is [the example implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L252-L312). It's easier to follow the explanation when you have the code.
+
+After the `CARD_FILE_HEADER` structure we have a 16-byte container info header. The purpose of the first 12 bytes is unknown to me, but the last 4 is the length of the rest of the data (which also depends on the container key). The actual data has the following format:
+
+```C
+// This structure is assembled by me
+typedef struct _CONTAINER_INFO_DATA {
+  PUBLICKEYSTRUC public_key_info;
+  RSAPUBKEY rsa_pub_key;
+  BYTE[] public_key_modulus;
+} CONTAINER_INFO_DATA;
+
+// https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/ns-wincrypt-publickeystruc
+typedef struct _PUBLICKEYSTRUC {
+  BYTE   bType;
+  BYTE   bVersion;
+  WORD   reserved;
+  ALG_ID aiKeyAlg;
+} BLOBHEADER, PUBLICKEYSTRUC;
+
+// https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/ns-wincrypt-rsapubkey
+typedef struct _RSAPUBKEY {
+  DWORD magic;
+  DWORD bitlen;
+  DWORD pubexp;
+} RSAPUBKEY;
+```
+
+*Note.* If the `public_key_modulus` is smaller than the specified key length (for example, by one byte), then it should be padded with zeroes to match the key length.
 
 ## `Cached_GeneralFile/mscp/kxc00`
 
