@@ -77,6 +77,8 @@ For the further work, only two instruments will be used:
 
 [**Time Travel Debugging**](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/time-travel-debugging-overview). I encourage you to try it! This technique saved me a lot of time. The possibility of re-playing and moving backward gives us almost unlimited power :muscle:.
 
+I do **not** recommend debugging smart cards with [API Monitor](http://www.rohitab.com/apimonitor) because it can miss some WinSCard API function calls.
+
 # Let's start the journey
 
 I suppose the whole debugging process is boring for you, so I'll show relevant reversed parts of the `msclmd.dll` with small descriptions. If you need only resulting cache items format (structure), then you should skip next sections and jump right to the [implementation](https://github.com/Devolutions/sspi-rs/blob/4409f9a5235dec0c033edce654aa6fe934a72afc/crates/winscard/src/scard_context.rs#L146-L394).
