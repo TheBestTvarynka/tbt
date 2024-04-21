@@ -96,7 +96,7 @@ But here is a surprise. When you try to read the code you'll find out that I hoo
 
 But it is still possible to hook. Thanks to [@awakecoding](https://x.com/awakecoding) I know how to do it. He had [researched](https://x.com/awakecoding/status/1725249330435518736) and implemented it in the [MsRdpEx](https://github.com/Devolutions/MsRdpEx): [fix winscard.dll delay-loading interception from basecsp.dll](https://github.com/Devolutions/MsRdpEx/pull/84). I reused some code and make it work for my debugging program :sweat_smile:.
 
-So, as a result, you should get `bad.dll`.
+So, as a result, you should get `bad.dll`. Do not forget to set your own paths in the code!
 
 ## Compile the launcher
 
@@ -106,7 +106,7 @@ The *"launcher"* is named as *"HookLibrary"* due to my own historical reasons :z
 2. Injects the `bad.dll` into the process memory forcing it to load this dll. In turn, the `bad.dll` will hook all needed methods.
 3. Continues the execution.
 
-So, as a result, you should get `HookLoadLibrary.exe`.
+So, as a result, you should get `HookLoadLibrary.exe`. Do not forget to set your own paths in the code!
 
 ## Run it
 
