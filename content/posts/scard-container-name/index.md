@@ -1,6 +1,6 @@
 +++
 title = "Smart card container name"
-date = 2024-05-04
+date = 2024-04-22
 draft = false
 
 [taxonomies]
@@ -9,6 +9,7 @@ tags = ["debugging", "windows", "scard"]
 [extra]
 keywords = "Debugging, API, Windows, Smart Card, Reverse Engineering"
 toc = true
+thumbnail = "win-scard-container-name-thumbnail.png"
 +++
 
 # Before I start
