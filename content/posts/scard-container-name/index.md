@@ -11,9 +11,7 @@ keywords = "Debugging, API, Windows, Smart Card, Reverse Engineering"
 toc = true
 +++
 
-# Getting Started
-
-In my previous article, I explained the different smart card cache items (files), their format, and purpose. The current one is some continuation of talking about PIV smart cards in Windows. The setup is the same: Windows smart card minidriver + PIV smartcard.
+# Before I start
 
 ## Goals
 
@@ -26,130 +24,18 @@ In my previous article, I explained the different smart card cache items (files)
 * Explain every piece of smart card architecture in Windows.
 * Explain every smart card minidriver function.
 
-# Overview
+# Getting Started
 
-*Note.* If you want to debug with me and reproduce each step on your machine, follow the steps from the [Debugging Environment](#debugging-environment) section and then come back here. If you only want to read my findings and smart card container name structure, then jump to the [Conclusion](#conclusion) section.
+In my [previous article](https://tbt.qkation.com/posts/win-scard-cache), I explained the different smart card cache items (files), their format, and purpose. The current one is some continuation of talking about PIV smart cards in Windows. The setup is the same: Windows smart card minidriver + PIV smartcard. But in this case, we'll use a fully emulated smart card :fire:.
 
-## The first run
+_**Note.**_ The current article is full of technical things related to debugging (WinDbg) and reversing (IDA). Depending on your purpose, choose one of the following paths:
 
-Let's try to sign the data using the emulated smart card.
+* If you want to reproduce each step with me, then perform all actions from the [Debugging environment](#debugging-environment) section and continue reading the article.
+* If you don't want to set up the whole environment but want to reproduce each step on your machine, then download my [TTD recoding and log files](https://drive.google.com/drive/folders/1eaQld0SC94sMgzQUMvIZ1Lm7vUo1PoSr?usp=sharing). But I still recommend reading the [Debugging environment](#debugging-environment) section (at least to know how I came up with it).
+* If you only want to read my findings and smart card container name structure, then jump to the [What?](#what) section.
+* `else`: read it fully.
 
-![](./failed-signing.png)
-
-Expectedly (otherwise, this article would not exist :slightly_smiling_face:), we got an exception. Our goal for the rest of the article is to figure out the cause of the error and fix it.
-
-## Error location
-
-At this point, I don't know what caused the error. So, let's use [WinDbg](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger) and make a [TTD](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/time-travel-debugging-overview) recording. Finding a function that returns an error in this way will be easier. With TDD recording I can walk through the execution without rerunning the app.
-
-_**Note.**_ Because the `HookLoadLibrary.exe` runs the `SignDataTpm.exe` in a separate process, you should attach WinDbg to this process instead of running the `HookLoadLibrary.exe` in the WinDbg.
-
-![](./how-to-tdd.png)
-
-Good. Now we can start debugging.
-
-![](./windbg-start-debugging.png)
-
-At this point, I can assume only something: some function in `msclmd.dll` or `basecsp.dll` fails and breaks the signing. Let's see the last `sspi-rs` FII calls in the logs to have at least some orientation on where to dig. If we catch a moment of the last winscard calls, we'll retrieve a call stack and then analyze those functions. These are the last meaningful records in the log file:
-
-![](./sspi-logs.png)
-
-We can see the `SCardTransmit` function call. I'll search for them in the WinDbg. But because I use the custom `winscard.dll`, all WinSCard-related functions have a `Rust_` prefix. Example:
-
-![](./windbg-winscard-function-names.png)
-
-I have omitted some manipulations so that this article is not too boring. In short, on the screenshot below we can see the last `SCardTransmit` call and part of the call stack:
-
-![](./windbg-call-stack.png)
-
-As I expected, we see the `msclmd.dll` and `basecsp.dll` functions. The next algorithm is the following: I take the highest function from the call stack and check the resulting status code in the WinDbg. If it succeeds, I take a lower function from the call stack and check its status code. When I finally find a failing function, I'll use WinDbg and IDA to see the exact failing point. I expect something like `return 0x80100004;` or any other status code.
-
-Hmmm :thinking:. All functions up to the C#-related ones were succeeded. Perhaps the last calls to `SCardTransmit` occurred after a signing error and Windows was trying to finalize the error/gather some information OR the signing process is not even started yet. I need another function to start with. Let's try `SCardReadCacheW`. I had a *"great"* experience with smart card caches in [the past](https://tbt.qkation.com/posts/win-scard-cache), so maybe it'll help me this time. Thanks to TDD I don't need to rerun it and can walk through the recording again and again.
-
-After some time I finally found something that looks like data signing :relieved:.
-
-![](./windbg-signing-call-stack.png)
-
-Let's see the status codes of the highlighted functions:
-
-![](./windbg-mslmd-pivcardsigndata-fail.png)
-
-Cool! Now we know what the `msclmd!I_PIVCardSignData` function returns the [`SCARD_E_INVALID_PARAMETER`](https://learn.microsoft.com/en-us/windows/win32/secauthn/authentication-return-values) status code.
-
-I need to find where in this function body the error has been thrown. Walking through every ASM instruction is boring and time-consuming, so I took an IDA and reversed this function as much as I could. After that, I marked some places (other function calls, `if`s, and so on) that could fail and checked them with WinDbg.
-
-![](./windbg-mslmd-I_GetKeyAndAlgFromMapIndex-fail.png)
-
-Okaaay, so, the key algorithm and id extraction have failed :thinking:. Reversed:
-
-```c
-return_code = I_GetKeyAndAlgFromMapIndex(
-                card_data,
-                *((_BYTE *)signing_info + 4),// bContainerIndex
-                (unsigned __int8 *)&key_buff,
-                &key_alg,
-                &key_size);
-```
-
-I dug into it and found exact place where the fail happens. I skipped this part for you and show you the result:
-
-![](./windbg-failed-I_IsValidPIVCertFileTag.png)
-
-Here is the reversed part of the ASM code above. We can see that invalid cert file tag causes the `SCARD_E_INVALID_PARAMETER` error:
-
-![](./ida-SCARD_E_INVALID_PARAMETER.png)
-
-On the screenshot above the part of the `msclmd!I_GetPIVKeyIDFromPIVCertFileTag` function is shown. The `msclmd!I_IsValidPIVCertFileTag` function has returned `0` (`false`). It means that the cert file tag is not valid.
-
-![](./ida-I_IsValidPIVCertFileTag.png)
-
-So, the `cert_file_tag` must meet highlighted conditions to be valid. In our case it's equal to `0xaaaaaa` which is obviously not valid. To fix it we need to figure out how the `cert_file_tag` is constructed and how we can change it to met one of the needed values. I did it for you, so take a look at the following screenshot:
-
-![](./ida-cert-file-tag-extraction.png)
-
-The screenshot above contains a part of the `msclmd!I_GetKeyAndAlgFromMapIndex` function. This piece of code gives us answers to our all questions. First of all, the `cert_file_tag` value is extracted from the `cmap_record` using the [`swscanf_s`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/sscanf-s-sscanf-s-l-swscanf-s-swscanf-s-l?view=msvc-170) function. In simple words, it takes the `cmap_record` buffer pointer, skips the first 30 characters (bytes), scans the following 6 characters (bytes), converts them from hex to decimal, and, finally, assigns it to the `cert_file_tag` variable. This is our `cert_file_tag` which is not valid. In turn, the `cmap_record` is a pointer to the [`CONTAINER_MAP_RECORD`](https://github.com/selfrender/Windows-Server-2003/blob/5c6fe3db626b63a384230a1aa6b92ac416b0765f/ds/security/csps/wfsccsp/inc/basecsp.h#L104-L110) structure where the first field is a container name:
-
-```c
-#define MAX_CONTAINER_NAME_LEN                  40
-
-typedef struct _CONTAINER_MAP_RECORD
-{
-    WCHAR wszGuid [MAX_CONTAINER_NAME_LEN];
-    BYTE bFlags;        
-    WORD wSigKeySizeBits;
-    WORD wKeyExchangeKeySizeBits;
-} CONTAINER_MAP_RECORD, *PCONTAINER_MAP_RECORD;
-```
-
-According to the Microsoft's specification:
-
-> *The `wszGuid` member consists of a UNICODE character string representation of an identifier that CAPI assigned to the container. This is usually, but not always, a GUID string. Identifier names cannot contain the special character “\”. When read-only cards are provisioned, the provisioning process must follow the same guidelines for identifier names.*
-
-## What?
-
-:face_exhaling: Let's summarize it all.
-
-The `CONTAINER_MAP_RECORD` structure contains a smart card container name. The container map record value is extracted from [the smart card cache](https://tbt.qkation.com/posts/win-scard-cache/#cached-generalfile-mscp-cmapfile). This container name (`wszGuid`) is not a random GUID value. This is a special value that must contain one of the allowed certificate file tags. The smart card driver (`msclmd.dll`) decides how to sign the data based on this `cer_file_tag`. All possible certificate file tags are defined and can be found in [the PIV smart card specification](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-73-4.pdf) and [open-source projects](https://github.com/search?q=0x5FC101+language%3AC&type=code&l=C) that follow this spec.
-
-![](./ida-cert-file-tags.png)
-
-> *Soooo, if we just change the container name, then data signing should work?* :point_right::point_left:
-
-It seems like yes, it should. We have nothing to lose. Let's try it.
-
-## The fix
-
-Change the `WINSCARD_CONTAINER` environment variable.
-
-| Name | Value | Example |
-|------|-------|---------|
-| `WINSCARD_CONTAINER` | Container name | 1b22c362-46ba-4889-ad5c-01f7aa5fc10awww |
-
-:crossed_fingers::crossed_fingers::crossed_fingers:
-
-![](./signature.png)
-
-:tada: It works! :tada: Ignore the error at the bottom of the terminal. The only important thing is the resulting signature. It means, that the data signing using the emulated smart card works well.
+Happy reading :blush:. Enjoy :relieved:.
 
 # Debugging environment
 
@@ -199,7 +85,7 @@ git checkout 4cd21349311b8edad03cc0dc8edf56407ccc22b9
 cargo build --all-features
 ```
 
-Of course, during my first debugging, I had a dev version of the `sspi-rs`. But now all developed functionality has been [merged](https://github.com/Devolutions/sspi-rs/pull/210), so we need to pick a specific commit. After that you will have `sspi.dll` in the `target/debug` directory. You can rename it to `winscard.dll` if you want.
+Of course, during my first debugging, I had a dev version of the `sspi-rs`. But now all developed functionality has been [merged](https://github.com/Devolutions/sspi-rs/pull/210), so we need to pick a specific commit. After that you will have `sspi.dll` in the `target/debug` directory. You can rename it to `winscard.dll` if you want (but it's not required).
 
 ## Compile `bad.dll`
 
@@ -235,16 +121,148 @@ Before trying to run this machinery we need to configure the emulated smart card
 | `WINSCARD_CONTAINER` | Container name | 1b22c362-46ba-4889-ad5c-01f7abcabcabedw |
 | `WINSCARD_READER` | Reader name | `Microsoft Virtual Smart Card 2` |
 
-And finally, run `HookLoadLibrary.exe`. You can see how I do it in the *Overview* section.
+And finally, run `HookLoadLibrary.exe`.
 
-[Back to the Overview section](#overview).
+# Debugging
+
+## The first run
+
+Let's try to sign the data using the emulated smart card.
+
+![](./failed-signing.png)
+
+Expectedly (otherwise, this article would not exist :slightly_smiling_face:), we got an exception. Our goal for the rest of the article is to figure out the cause of the error and fix it.
+
+## Error location
+
+At this point, I don't know what caused the error. So, let's use [WinDbg](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger) and make a [TTD](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/time-travel-debugging-overview) recording. Finding a function that returns an error in this way will be easier. With TTD recording I can walk through the execution without rerunning the app.
+
+_**Note.**_ Because the `HookLoadLibrary.exe` runs the `SignDataTpm.exe` in a separate process, you should attach WinDbg to this process instead of running the `HookLoadLibrary.exe` in the WinDbg.
+
+![](./how-to-tdd.png)
+
+Good. Now we can start debugging.
+
+![](./windbg-start-debugging.png)
+
+At this point, I can assume only something: some function in `msclmd.dll` or `basecsp.dll` fails and breaks the signing. Let's see the last `sspi-rs` FII calls in the logs to have at least some orientation on where to dig. If we catch a moment of the last winscard calls, we'll retrieve a call stack and then analyze those functions. These are the last meaningful records in the log file:
+
+![](./sspi-logs.png)
+
+We can see the `SCardTransmit` function call. I'll search for them in the WinDbg. But because I use the custom `winscard.dll`, all WinSCard-related functions have a `Rust_` prefix. Example:
+
+![](./windbg-winscard-function-names.png)
+
+I have omitted some manipulations so that this article is not too boring. In short, on the screenshot below we can see the last `SCardTransmit` call and part of the call stack:
+
+![](./windbg-call-stack.png)
+
+As I expected, we see the `msclmd.dll` and `basecsp.dll` functions. The next algorithm is the following: I take the highest function from the call stack and check the resulting status code in the WinDbg. If it succeeds, I take a lower function from the call stack and check its status code. When I finally find a failing function, I'll use WinDbg and IDA to see the exact failing point. I expect something like `return 0x80100004;` or any other status code.
+
+Hmmm :thinking:. All functions up to the C#-related ones were succeeded. Perhaps the last calls to `SCardTransmit` occurred after a signing error and Windows was trying to finalize the error/gather some information OR the signing process is not even started yet. I need another function to start with. Let's try `SCardReadCacheW`. I had a *"great"* experience with smart card caches in [the past](https://tbt.qkation.com/posts/win-scard-cache), so maybe it'll help me this time. Thanks to TTD I don't need to rerun it and can walk through the recording again and again.
+
+After some time I finally found something that looks like data signing :relieved:.
+
+![](./windbg-signing-call-stack.png)
+
+Let's see the status codes of the highlighted functions:
+
+![](./windbg-mslmd-pivcardsigndata-fail.png)
+
+Cool! Now we know what the `msclmd!I_PIVCardSignData` function returns the [`SCARD_E_INVALID_PARAMETER`](https://learn.microsoft.com/en-us/windows/win32/secauthn/authentication-return-values) status code.
+
+I need to find where in this function body the error has been thrown. Walking through every ASM instruction is boring and time-consuming, so I took an IDA and reversed this function as much as I could. After that, I marked some places (other function calls, `if`s, and so on) that could fail and checked them with WinDbg.
+
+![](./windbg-mslmd-I_GetKeyAndAlgFromMapIndex-fail.png)
+
+Okaaay, so, the key algorithm and id extraction have failed :thinking:. Reversed pseudo-code:
+
+```c
+return_code = I_GetKeyAndAlgFromMapIndex(
+                card_data,
+                *((_BYTE *)signing_info + 4),// bContainerIndex
+                (unsigned __int8 *)&key_buff,
+                &key_alg,
+                &key_size);
+```
+
+I dug into it and found exact place where the fail happens. I skipped this part for you and show you the result:
+
+![](./windbg-failed-I_IsValidPIVCertFileTag.png)
+
+Here is the reversed part of the ASM code above. We can see that invalid cert file tag causes the `SCARD_E_INVALID_PARAMETER` error:
+
+![](./ida-SCARD_E_INVALID_PARAMETER.png)
+
+On the screenshot above the part of the `msclmd!I_GetPIVKeyIDFromPIVCertFileTag` function is shown. The `msclmd!I_IsValidPIVCertFileTag` function has returned `0` (`false`). It means that the cert file tag is not valid.
+
+![](./ida-I_IsValidPIVCertFileTag.png)
+
+So, the `cert_file_tag` must meet highlighted conditions to be valid. In our case it's equal to `0xaaaaaa` which is obviously not valid. To fix it we need to figure out how the `cert_file_tag` is constructed and how we can change it to met one of the needed values. I did it for you, so take a look at the following screenshot:
+
+![](./ida-cert-file-tag-extraction.png)
+
+The screenshot above contains a part of the `msclmd!I_GetKeyAndAlgFromMapIndex` function. This piece of code gives us answers to all our questions. First of all, the `cert_file_tag` value is extracted from the `cmap_record` using the [`swscanf_s`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/sscanf-s-sscanf-s-l-swscanf-s-swscanf-s-l?view=msvc-170) function. In simple words, it takes the `cmap_record` buffer pointer, skips the first 30 characters (bytes), scans the following 6 characters (bytes), converts them from hex to decimal, and, finally, assigns it to the `cert_file_tag` variable. This is our `cert_file_tag` which is not valid. In turn, the `cmap_record` is a pointer to the [`CONTAINER_MAP_RECORD`](https://github.com/selfrender/Windows-Server-2003/blob/5c6fe3db626b63a384230a1aa6b92ac416b0765f/ds/security/csps/wfsccsp/inc/basecsp.h#L104-L110) structure where the first field is a container name:
+
+```c
+#define MAX_CONTAINER_NAME_LEN                  40
+
+typedef struct _CONTAINER_MAP_RECORD
+{
+    WCHAR wszGuid [MAX_CONTAINER_NAME_LEN];
+    BYTE bFlags;        
+    WORD wSigKeySizeBits;
+    WORD wKeyExchangeKeySizeBits;
+} CONTAINER_MAP_RECORD, *PCONTAINER_MAP_RECORD;
+```
+
+According to the Microsoft's specification:
+
+> *The `wszGuid` member consists of a UNICODE character string representation of an identifier that CAPI assigned to the container. This is usually, but not always, a GUID string. Identifier names cannot contain the special character “\”. When read-only cards are provisioned, the provisioning process must follow the same guidelines for identifier names.*
+
+## What?
+
+:face_exhaling: Let's summarize it all.
+
+The `CONTAINER_MAP_RECORD` structure contains a smart card container name. The container map record value is extracted from [the smart card cache](https://tbt.qkation.com/posts/win-scard-cache/#cached-generalfile-mscp-cmapfile). This container name (`wszGuid`) is not a random GUID value. This is a special value that must contain one of the allowed certificate file tags. The smart card driver (`msclmd.dll`) decides how to sign the data based on this `cer_file_tag`. All possible certificate file tags are defined and can be found in [the PIV smart card specification](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-73-4.pdf) and [open-source projects](https://github.com/search?q=0x5FC101+language%3AC&type=code&l=C) that follow this spec.
+
+![](./ida-cert-file-tags.png)
+
+> *Soooo, if we just change the container name, then data signing should work?* :point_right::point_left:
+
+It seems like yes, it should. We have nothing to lose. Let's try it.
+
+## The fix
+
+Change the `WINSCARD_CONTAINER` environment variable.
+
+| Name | Value | Example |
+|------|-------|---------|
+| `WINSCARD_CONTAINER` | Container name | 1b22c362-46ba-4889-ad5c-01f7aa5fc10awww |
+
+:crossed_fingers::crossed_fingers::crossed_fingers:
+
+![](./signature.png)
+
+:tada: It works! :tada: Ignore the error at the bottom of the terminal. The only important thing is the resulting signature. It means, that the data signing using the emulated smart card works well :relieved:. Even in the `sspi-rs` logs we can see `SCardTransmit` calls with input padded digest and output signature:
+
+![](./sspi-signature-logs.png)
+
+:blush::blush::blush: I don't know why this container name format is not documented anywhere (at least I didn't find any mention about it on the Internet).
 
 # Conclusion
+
+There are a lot of ways of debugging programs. In this article, I told you about one of my cases where I need to be creative and patient. In the end, I could tell that Windows is bad and so on, but I'll say the following instead:
+
+> *Everything is possible. Any bug and problem is solvable. Be creative and have patience.*
+
+Wish you more interesting bugs and fun debugging! :stuck_out_tongue_closed_eyes:
 
 # Doc, references, code
 
 * [Smart Card Minidriver Overview](https://learn.microsoft.com/en-us/windows-hardware/drivers/smartcard/smart-card-minidriver-overview).
 * [Emulated smart cards implementation](https://github.com/Devolutions/sspi-rs/pull/210).
-* [Source code of all used debugging tools](https://github.com/TheBestTvarynka/trash-code/tree/scard-container-name/scard-container-name).
+* [Source code of all used debugging programs](https://github.com/TheBestTvarynka/trash-code/tree/scard-container-name/scard-container-name).
 * [WinDbg](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger).
 * [TTD](https://learn.microsoft.com/en-us/windows-hardware/drivers/debuggercmds/time-travel-debugging-overview).
+* [TTD recording and log files](https://drive.google.com/drive/folders/1eaQld0SC94sMgzQUMvIZ1Lm7vUo1PoSr?usp=sharing).
