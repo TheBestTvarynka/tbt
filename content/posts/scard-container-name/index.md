@@ -106,7 +106,7 @@ The *"launcher"* is named as *"HookLibrary"* due to my own historical reasons :z
 2. Injects the `bad.dll` into the process memory forcing it to load this dll. In turn, the `bad.dll` will hook all needed methods.
 3. Continues the execution.
 
-So, as a result, you should get `HookLoadLibrary.exe`. Do not forget to set your own paths in the code!
+So, as a result, you should get `HookLoadLibrary.exe`.
 
 ## Run it
 
