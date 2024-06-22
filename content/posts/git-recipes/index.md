@@ -96,15 +96,95 @@ Run `git commit --help` for more flags.
 
 ## Edit any commit in branch
 
+Lets say you want to edit 5th commit starting from the current one (5th parent). You can use the `git rebase` with its interactive mode to do it:
+
+```bash
+git rebase -i HEAD~5
+```
+
+The `git` will open a text file with a list of 5 commits (parent commits). Now you need to write `edit` instead of `pick` for commit you want to edit. Safe this file and clone the editor. The rebasing will stop in the specified commit.
+
+Now all you need is to edit selected commit and continue rebasing:
+
+* Check this recipe to know how to edit the commit: [Edit last commit](#edit-last-commit).
+* Continue rebasing:
+
+```bash
+git rebase --continue
+```
+
+### Example
+
+I want to edit the the parent commit:
+
+![](./git_log.png)
+
+So, I type `git rebase -i HEAD~2` and edit the opened text file:
+
+![](./git_rebase_edit.png)
+
+When I save the file and close the editor, I see (`git status`) that rebasing has stopped in the needed commit (`1` on the screenshot) and git even shows me helpful commands (`2` on the screenshot):
+
+![](./git_rebase_status.png)
+
+I edit files as I want, commit changes, and continue rebasing:
+
+![](./git_rebase_finish.png)
+
+That's all! Nothing complicated :smile:.
+
 ## Split commit into two
+
+Oh, it is an easy one. Usually, I do it in two steps:
+
+1. "Undo" the last commit but save changes. [Last commit to index](#last-commit-to-index).
+2. Create two different commits with `git add` and `git commit`.
+
+```bash
+# "Undo" last commit and save its changes. Changes will not be indexed after this command.
+git reset --mixed HEAD~1
+# First commit:
+git add <files for first commit>
+git commit -m <first commit message>
+# Second commit
+git add <files for second commit>
+git commit -m <second commit message>
+```
+
+You can split one commit into multiple ones with this approach. If you need to split another commit in your branch (one of the parent commits), use the `git rebase -i` and `git reset` commands. More info: [Edit any commit in branch](#edit-any-commit-in-branch).
 
 ## Safe dirty changes
 
 ## Split branch into a few pull requests
 
+:expressionless: :worried: :face_with_spiral_eyes:
+
+![](./post_merge_request.png)
+
+([post source](https://x.com/xanf_ua/status/1688486956202643456))
+
+The algorithm is simple:
+
+1. Decide how to split. How many branched you'll have and what commits you'll move to what branches.
+2. If you need to split some commits in order to move them to separate branches, then read the [Split commit into two](#split-commit-into-two) recipe, and go to the step 1. Otherwise, go to step 2.
+3. Create needed branches in the base commit of the current branch.
+4. Use `git checkout` and `git cherry-pick` commands to apply commits to corresponding branches.
+
 ## Untrack file
 
-## Aliases
+If you want `git` to ignore some file, then just add it to the `.gitignore` file. For example:
+
+```bash
+echo "credentials.json" >> .gitignore
+```
+
+But if this file was tracked by the `git` before, then this is not enough. You also need to run:
+
+```bash
+git rm --cached
+```
+
+More info you can read in this SO answer: [How to stop tracking and ignore changes to a file in Git?](https://stackoverflow.com/a/936290/9123725)
 
 # Conclusion
 
