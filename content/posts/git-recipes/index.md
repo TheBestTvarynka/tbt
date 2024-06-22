@@ -1,14 +1,15 @@
 +++
 title = "Git recipes"
-date = 2024-06-25
+date = 2024-06-22
 draft = false
 
 [taxonomies]
-tags = ["clap", "recipes", "git"]
+tags = ["recipes", "git"]
 
 [extra]
 keywords = "Git, VCS"
 toc = true
+thumbnail = "git-thumbnail.png"
 +++
 
 Recently I lectured in my company about [`git`](https://www.git-scm.com/) and resolving specific situations with it. It inspired me to write this article. I know that there is tons of info about `git` and related stuff. I wanted to make this one as a comprehensive set of instructions about resolving concrete git situations.
@@ -153,8 +154,6 @@ git commit -m <second commit message>
 
 You can split one commit into multiple ones with this approach. If you need to split another commit in your branch (one of the parent commits), use the `git rebase -i` and `git reset` commands. More info: [Edit any commit in branch](#edit-any-commit-in-branch).
 
-## Safe dirty changes
-
 ## Split branch into a few pull requests
 
 :expressionless: :worried: :face_with_spiral_eyes:
@@ -186,12 +185,35 @@ git rm --cached
 
 More info you can read in this SO answer: [How to stop tracking and ignore changes to a file in Git?](https://stackoverflow.com/a/936290/9123725)
 
+## Just my notes
+
+Commands below are my notes for quick access:
+
+```bash
+# last commit with date
+git log --pretty=format:"%h%x09%an%x09%ad%x09%s" | head -n 1
+
+# one commit changes
+git show ff10697de4f
+
+# move last 10 commits from HEAD to another_branch.
+# note. this command will not move the another_branch itself. just adds commits on top of it
+git rebase -i HEAD~10 --onto another_branch
+
+# author and commiter
+git cat-file commit HEAD
+
+# print any file in any commit. more info: https://juplo.de/cat-any-file-in-any-commit-with-git/
+git show <hash>:<filepath>
+```
+
 # Conclusion
 
 There are no any _smart_ conclusions. But I have stupid ones :grin::
 
 * Make small atomic commits. The smaller your commits are, the better. It's easier to work with such commits. Moreover, everything committed in `git` always stays inside of it and can always be restored.
 
+There are a lot of other `git` commands. I just listed the most common situations for me.
 I just leave it here: [HN: Nobody really understands git](https://news.ycombinator.com/item?id=16807206).
 
 # Doc, references, code
