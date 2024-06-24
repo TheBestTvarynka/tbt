@@ -9,6 +9,7 @@ tags = ["rust", "tool"]
 [extra]
 keywords = "Rust, Miri"
 toc = true
+thumbnail = "miri-thumbnail.png"
 +++
 
 For ones who don't know ([quote src](https://github.com/rust-lang/miri)):
@@ -36,7 +37,7 @@ rustup +nightly component add miri
 ```
 
 Why *nightly*? The Miri can be run only with the nightly Rust. So, you should be able to compile your project with nightly Rust.
-In short, Miri can run project binaries, tests, examples, and so on.
+Miri can run project binaries, tests, examples, and so on.
 
 ```bash
 cargo +nightly miri run
@@ -90,7 +91,7 @@ Miri has found more bugs than I expected. The UB was in such places I can't even
 
 # Limitations
 
-* **Miri can execute only Rust code.** It means you don't have access to all functions from `libc` or any other foreign functions (system API, FFI). Miri can open the file or read the environment variable. But you can not make a TCP connection, for example. It's another reason to write [low-coupled code with high cohesion](https://stackoverflow.com/q/14000762/9123725).
+* **Miri can execute only Rust code.** It means you don't have access to all functions from `libc` or any other foreign functions (system API, FFI). Miri can open the file or read the environment variable. But you can not establish a TCP connection, for example. It's another reason to write [low-coupled code with high cohesion](https://stackoverflow.com/q/14000762/9123725).
 * **Miri can not ensure that your program is sound.** From Miri [README.md](https://github.com/rust-lang/miri?tab=readme-ov-file#miri):
   >  [Soundness](https://rust-lang.github.io/unsafe-code-guidelines/glossary.html#soundness-of-code--of-a-library) is the property of never causing undefined behavior when invoked from arbitrary safe code, even in combination with other sound code. In contrast, Miri can just tell you if *a particular way of interacting with your code* (e.g., a test suite) causes any undefined behavior. It is up to you to ensure sufficient coverage.
 * **Miri can be slow on big/heavy tests.** It's because Miri is *an interpreter* for Rust's mid-level intermediate representation. It means that the code is not compiled to ASM and is not executed directly on the CPU.
