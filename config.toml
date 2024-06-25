@@ -63,7 +63,7 @@ footer_credit = true
 textlogo = 'TheBestTvarynka'
 
 sitedesc = false # enables or disables the display of the site description below the logo.
-#copyright_start_year = 2019  # optional
+copyright_start_year = 2023  # optional
 #copyright_end_year = 2020  # optional, recommend leaving unset, zola build will set this to current year by default
 headhr = false # show or hide horizontal rule below header
 foothr = true # show or hide horizontal rule above footer
@@ -108,9 +108,9 @@ js_theme = "theme.min.js" # Separate Always, comment out if using -auto/-light/-
 js_themeButton = "theme_button.js"# Bundleable
 
 ########## Switcher ########## (comment this block out if NOT using switcher):
-stylesheets = [ "abridge-switcher.css" ] # Orange Automatic Dark/Light Theme based on browser/system preference with switcher
-#stylesheets = [ "abridge-blue-switcher.css" ] # Blue Automatic Night/Light Theme based on browser/system preference with switcher
-#stylesheets = [ "abridge-blueshade-switcher.css" ] # BlueShade Automatic Night/Light Theme based on browser/system preference with switcher
+# stylesheets = [ "abridge-switcher.css" ] # Orange Automatic Dark/Light Theme based on browser/system preference with switcher
+stylesheets = [ "abridge-blue-switcher.css" ] # Blue Automatic Night/Light Theme based on browser/system preference with switcher
+# stylesheets = [ "abridge-blueshade-switcher.css" ] # BlueShade Automatic Night/Light Theme based on browser/system preference with switcher
 #stylesheets = [ "abridge-switcher.css", "font.css" ] # include your own font!
 #stylesheets = [ "abridge-switcher.css", "iconfont.css" ] # include your own font icons!
 #stylesheets = [ "abridge-switcher.css", "font.css", "iconfont.css" ] # include your own font, and font icons!
@@ -187,7 +187,7 @@ katex_bundle = "katexbundle.min.js"
 ##########################
 # meta/seo/analytic tags
 ##########################
-keywords = "Abridge, Abridge.css, Zola, Theme, Zola Theme, getzola, Semantic Html, Fast, lightweight" # used for the primary site index
+keywords = "Rust, Debugging, Eeverse Engineering, Smart cards, Git, TheBestTvarynka" # used for the primary site index
 twitter = "TheBestTvarynka" # used for twitter related
 #google = "Your Google Site verification code."
 #bing = "Your Bing Site verification code."
