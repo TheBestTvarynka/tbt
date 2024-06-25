@@ -72,7 +72,7 @@ The first run:
 
 ![](./compilation_errors.png)
 
-Uuups, I can't compile the project with nightly Rust. I have warned you about it above. In my case, updating the `Cargo.lock` is enough. But it's just a case and we can be forced to spend more time on it.
+Uuups, I can't compile the project with nightly Rust. I have warned you about it above. In my case, [updating the `Cargo.lock`](https://github.com/Devolutions/sspi-rs/pull/255) is enough. But it's just a case and we can be forced to spend more time on it.
 
 The second run was more *"successful"*:
 
@@ -87,7 +87,7 @@ The second run was more *"successful"*:
 
 Isn't this cool? It's very cool! Now I have so much info to fix this UB. I can't ask for more info :smile:.
 
-Miri has found more bugs than I expected. The UB was in such places I can't even think of. In this PR you can see what UB and memory leaks I have fixed thanks to Miri: [PR DESCRIPTION](https://github.com/Devolutions/sspi-rs/pulls).
+Miri has found more bugs than I expected. The UB was in such places I can't even think of. In this PR you can see what UB and memory leaks I have fixed thanks to Miri: [Fix UB and memory leaks found by Miri](https://github.com/Devolutions/sspi-rs/pull/256).
 
 # Limitations
 
