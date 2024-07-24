@@ -14,12 +14,22 @@ mermaid = true
 
 # Intro
 
-This big article is a detailed lore about how I added a smart card auth support (*scard supprt*) to [`FreeRDP`](https://github.com/FreeRDP/FreeRDP).
+This big article is a detailed lore about how I added a smart card auth support (*scard support*) to the [`FreeRDP`](https://github.com/FreeRDP/FreeRDP).
+
+> _The FreeRDP already supports the scard auth, isn't it?_
+
+Well, yes, but this case is a bit special. I need to tell you a little backstory to clear everything out.
+
+Some time ago the emulated smart card has been implemented in the `sspi-rs`: [Devolutions/sspi-rs/pull/210](https://github.com/Devolutions/sspi-rs/pull/210). It allows us to use an emulated smart card for the RDP authorization without additional drivers, TMP smart cards, etc.
+
+The next big step is to support the system-provided smart cards. It'll allow us to use one `sspi.dll/.so` library for full authorization with scards support. We will be able to switch between emulated and real scards.
 
 # Building FreeRDP
 
 ```bash
 # Please, do not copy and paste these commands blindly!
+# Hmmmm...
+# DO NOT COPY THESE COMMANDS AT ALL!
 git clone https://github.com/FreeRDP/FreeRDP.git
 cd FreeRDP/
 sudo pacman -S cmake
@@ -158,7 +168,7 @@ static int nla_client_authenticate(rdpNla* nla)
     // ...
 	if (nla_client_begin(nla) < 1)
 		goto fail;
-    
+
 	while (nla_get_state(nla) < NLA_STATE_AUTH_INFO)
 	{
         // ...
@@ -204,9 +214,134 @@ Additionally, the FreeRDP also has a `/smartcard-logon` arg. It enables _"Smartc
 
 IDK :sweat_smile: and we'll focus on it from now.
 
-## Scard: second look
+## Scard credentials
 
+What it smart card credentials? It's a set of:
 
+* **_PIN code_**. I think you what it is.
+* **_Reader Name_**: The name of the smart card reader.
+* **_CSP Name_**: The name of the [Cryptographic Service Provider](https://en.wikipedia.org/wiki/Cryptographic_Service_Provider) (CSP). For example, _Microsoft Base Smart Card Crypto Provider_.
+* **_Scard certificate_**. Actually, the scard can contain many certificates for different purposes. But we can say that the scard for RDP auth must contain at least one certificate issues by the domain ([AD CS](https://learn.microsoft.com/en-us/windows-server/identity/ad-cs/active-directory-certificate-services-overview)).
+* **_Card Name_**.
+* **_Smart Card Container Name_**.
+* **_User Name_**. Usually, can be extracted from the user ceriticate.
+
+Of cource, we don't want to specify all of them in cli (and we shouldn't). So, the FreeRDP has its own scard credentials mechanism implemented: [`nla_adjust_settings_from_smartcard`](https://github.com/FreeRDP/FreeRDP/blob/c9aa349c52bb3749ac1d37fe16c9f548ee6c53e4/libfreerdp/core/nla.c#L218). How does it work? In short, it iterates through all available container names and tries to find a matched one: [`smartcard_hw_enumerateCerts`](https://github.com/FreeRDP/FreeRDP/blob/c9aa349c52bb3749ac1d37fe16c9f548ee6c53e4/libfreerdp/core/smartcardlogon.c#L557):
+
+```c
+// pseudo-code
+static BOOL smartcard_hw_enumerateCerts(...)
+{
+	const char* Pkcs11Module = freerdp_settings_get_string(settings, FreeRDP_Pkcs11Module);
+
+	if (Pkcs11Module)
+	{
+		/* load a unique CSP by pkcs11 module path */
+		LPCSTR paths[] = { Pkcs11Module, NULL };
+
+		status = winpr_NCryptOpenStorageProviderEx(&provider, csp, 0, paths);
+		status = list_provider_keys(settings, provider, csp, scope, userFilter, domainFilter,
+		                            &cert_list, &count);
+	}
+	else
+	{
+		status = NCryptEnumStorageProviders(&nproviders, &names, NCRYPT_SILENT_FLAG);
+
+		for (DWORD i = 0; i < nproviders; i++)
+		{
+			char providerNameStr[256] = { 0 };
+			const NCryptProviderName* name = &names[i];
+
+			if (ConvertWCharToUtf8(name->pszName, providerNameStr, ARRAYSIZE(providerNameStr)) < 0) { }
+
+			WLog_DBG(TAG, "exploring CSP '%s'", providerNameStr);
+			if (csp && _wcscmp(name->pszName, csp) != 0)
+			{
+				WLog_DBG(TAG, "CSP '%s' filtered out", providerNameStr);
+				continue;
+			}
+
+			status = NCryptOpenStorageProvider(&provider, name->pszName, 0);
+			if (status != ERROR_SUCCESS)
+				continue;
+
+			if (!list_provider_keys(settings, provider, name->pszName, scope, userFilter,
+			                        domainFilter, &cert_list, &count))
+				WLog_INFO(TAG, "error when retrieving keys in CSP '%s'", providerNameStr);
+
+			NCryptFreeObject((NCRYPT_HANDLE)provider);
+		}
+
+		NCryptFreeBuffer(names);
+	}
+
+	*scCerts = cert_list;
+	*retCount = count;
+	ret = TRUE;
+
+	return ret;
+}
+```
+
+Now can can made a few conclusions:
+
+* We can inject ouw own [pkcs11](https://en.wikipedia.org/wiki/PKCS_11) module using the `/pkcs11-module:<path>` arg. But as I understand we can only use it only with the `/kerberos` arg:
+```txt
+/kerberos: [kdc-url:<url>,lifetime:<time>,start-time:<time>,
+            renewable-lifetime:<time>,cache:<path>,armor:<path>,
+            pkinit-anchors:<path>,pkcs11-module:<name>]
+                                  Kerberos options
+```
+* It uses the _NCrypt_ API for scard credentials ajusting. Actually, the original [NCrypt API](https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/) is only awailale on Windows. So, the FreeRDP has its own wrapper over pkcs11 module and explorts NCrypt-like API: [`ncrypt_pkcs11.c`](https://github.com/FreeRDP/FreeRDP/blob/c9aa349c52bb3749ac1d37fe16c9f548ee6c53e4/winpr/libwinpr/ncrypt/ncrypt_pkcs11.c).
+* The `ncrypt_pkcs11.c` module contains only functions for data gathering: extracting PIN contaier name, obtaining different properties values, keys or containers enumeration. But this module doesn't contain any functions for data signing :confused:.
+
+...Hmmm, okayyyyyy. Now we now what components collect smart card credentials. But we don't know what compoent(s) can perform authorization (Kerberos messages + data signing using smart card). Lets investigate it further.
+
+## Kerberos
+
+The one thing I'm sure about is that the Kerberos authentication is only available via SSPI API and all Kerberos-related code is located in the [`winpr/libwinpr/sspi/Kerberos`](https://github.com/FreeRDP/FreeRDP/tree/c9aa349c52bb3749ac1d37fe16c9f548ee6c53e4/winpr/libwinpr/sspi/Kerberos) folder. In order to support Kerberos auth, the FreeRDP uses one of two available Kerberos implementations: [MIT](https://github.com/krb5/krb5) and [Heimdal](https://github.com/heimdal/heimdal). Does FreeRDP support the Kerberos scard auth? To answer this question we need to check if at least one of these Kerberos imlpementations implements the [PK-INIT](https://datatracker.ietf.org/doc/html/rfc4556) Kerberos extension. **_My expectations (my bet)_**: they implement it but depends on some crypto module like _pkcs11_ in order to support flexible mechanism for all crypto-related operations.
+
+[`heimdal/doc/setup.texi`](https://github.com/heimdal/heimdal/blob/ba8c3dbc6261ab397ce5bb4fc0ca6b0ea23eb46a/doc/setup.texi#L1577-L1584):
+
+> @item PKCS11:
+>
+> PKCS11: is used to handle smartcards via PKCS#11 drivers, such as soft-token, opensc, or muscle. The argument specifies a shared object that implements the PKCS#11 API. The default is to use all slots on the device/token.
+
+The MIT KRB5 implementation is also supports the PKCS11 injecting. [`krb5/doc/conf.py`](https://github.com/krb5/krb5/blob/354f176ba6d6cc544e1c15712a13f9c006ca605d/doc/conf.py#L235-L259):
+
+```py
+if 'mansubs' in tags:
+    # ...
+    pkcs11_modname = '``@PKCS11MOD@``' # <-------
+elif 'pathsubs' in tags:
+    # Read configured paths from a file produced by the build system.
+    exec(open("paths.py").read())
+else:
+    # ...
+    pkcs11_modname = ':ref:`PKCS11_MODNAME <paths>`' # <-------
+```
+
+[`krb5/doc/build/options2configure.rst`](https://github.com/krb5/krb5/blob/354f176ba6d6cc544e1c15712a13f9c006ca605d/doc/build/options2configure.rst?plain=1#L140-L141):
+
+> **PKCS11_MODNAME=**\ *library*
+>
+> Override the built-in default PKCS11 library name.
+
+Let's summarize it. The FreeRDP Kerberos implementation uses external Kerberos protocol implementation and just wraps it in the SSPI API. The MIT KRB5 or Heimdal Kebreros implementations can be used. Both of them use PKCS11 module to support PK-INIT (and scard-related operations). Soooo, in order to support RDP scard auth we need to provide a suitable PKCS11 module. :face_exhaling:
+
+## PKCS11 module
+
+[PKCS#11](https://en.wikipedia.org/wiki/PKCS_11):
+
+> In cryptography, PKCS #11 is one of the Public-Key Cryptography Standards, and also refers to the programming interface to create and manipulate cryptographic tokens (a token where the secret is a cryptographic key).
+
+In other words, it's a library with a defined (standardized) API that can perform some crypto operations related to public/private keys, asymmetric encryption, and so on.
+
+In our case, we need some PKCS#11 module that supports smart cards and uses WinSCard/PCSC-lite API for communicating with scard. Many smart card vendors has pkcs#11 module for their scards. For example, [`libykcs11`](https://developers.yubico.com/yubico-piv-tool/YKCS11/).
+
+> *Soooo, if I take any smart card with a corresponding pkcs#11 library, then scard auth in FreeRDP should work. Rught*
+
+... :thinking: Yeah, it looks like this.
 
 # Doc, references, code
 
@@ -215,3 +350,6 @@ IDK :sweat_smile: and we'll focus on it from now.
 * [Kerberos Authentication Explained](https://www.varonis.com/blog/kerberos-authentication-explained).
 * [What is Kerberos](https://blog.netwrix.com/what-is-kerberos/).
 * [RFC: The Kerberos Network Authentication Service (V5)](https://datatracker.ietf.org/doc/html/rfc4120).
+* [Public Key Cryptography for Initial Authentication in Kerberos (PKINIT)](https://datatracker.ietf.org/doc/html/rfc4556).
+* [FreeRDP](https://github.com/FreeRDP/FreeRDP/blob/c9aa349c52bb3749ac1d37fe16c9f548ee6c53e4) source code.
+* [PKCS#11](https://en.wikipedia.org/wiki/PKCS_11).
