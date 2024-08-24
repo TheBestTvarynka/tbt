@@ -343,6 +343,12 @@ In our case, we need some PKCS#11 module that supports smart cards and uses WinS
 
 ... :thinking: Yeah, it looks like this.
 
+# The Device
+
+I have some noname devices like smart card, smart card reader, FIDO2 security key, etc. But all of them are super weird and I don't have any clue how to use them. So, I decided that it's easier for me just to buy a Yubikey device.
+
+I bought this one: [Yubikey 5 Nano](https://support.yubico.com/hc/en-us/articles/360013708340-YubiKey-5-Nano) and started testing with it.
+
 # Doc, references, code
 
 * [Security Support Provider Interface (SSPI)](https://learn.microsoft.com/en-us/windows/win32/rpc/security-support-provider-interface-sspi-).
