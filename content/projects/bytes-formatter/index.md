@@ -5,7 +5,7 @@ date = 2023-04-09
 draft = false
 
 [taxonomies]
-tags = ["js", "tools"]
+tags = ["js", "tools", "project"]
 
 [extra]
 keywords = "byte-formatter, utils, hex, tools"

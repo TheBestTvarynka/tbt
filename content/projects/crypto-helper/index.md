@@ -5,7 +5,7 @@ date = 2023-04-09
 draft = false
 
 [taxonomies]
-tags = ["yew", "rust", "tools"]
+tags = ["yew", "rust", "tools", "project"]
 
 [extra]
 toc = true
