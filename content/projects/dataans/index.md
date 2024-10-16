@@ -1,6 +1,6 @@
 +++
 title = "dataans"
-description = "Take notes in the form of markdown snippets grouped into spaces."
+description = "Take notes in markdown snippets grouped into spaces."
 date = 2024-10-16
 draft = false
 
@@ -15,7 +15,7 @@ thumbnail = "dataans-thumbnail.png"
 
 Source code: [github/TheBestTvarynka/Dataans](https://github.com/TheBestTvarynka/Dataans/).
 
-The Dataans is a desktop app that allows you to take notes in the form of markdown snippets grouped into spaces. Yes, it's another note-taking app, but with unique features I miss in all other note-taking apps.
+The Dataans is a desktop app that allows you to take notes in the form of markdown snippets grouped into spaces. Yes, it's another note-taking app, but it has unique features that I miss in all other note-taking apps.
 
 # Motivation
 
@@ -29,7 +29,7 @@ Do I need to explain that it isn't convenient and hard to find anything? I neede
 
 I relate a lot to this blog post ([Why build a messenger app only for sending to yourself?](https://monoline.io/posts/2021/11/11/why-build-a-messenger-app-only-for-sending-to-yourself/)). I quote many key points from it but explain them in my own way and how they relate to me.
 
-1. **Too many options**. I don't need so much test editing functionality. I just want to take notes and have simle markup (styling) functionality. Something like [markdown](https://www.markdownguide.org/) or [asciidoc](https://docs.asciidoctor.org/).
+1. **Too many options**. I don't need so much test editing functionality. I just want to take notes and have simple markup (styling) functionality. Something like [markdown](https://www.markdownguide.org/) or [asciidoc](https://docs.asciidoctor.org/).
 2. **Unwanted features**. This echoes the previous point, but I want to draw your attention specifically to the UNWANTED features. For example, I don't need AI to search for info in my notes. I only need a typical search engine. I don't want AI to write notes for me. I can write down my thoughts by myself.
 3. **Article-oriented mindset**. People don't think in articles. Many note-taking apps look like you are going to write an article instead of just writing down the idea, thought, or a random piece of data. When I see a blank screen with the cursor, I feel I need to write a document with a defined structure, style, and line of thought. It throws off the thoughts I wanted to write at the beginning.
 
@@ -41,7 +41,7 @@ All note-taking apps I tried lack one or more features listed below. No one cont
 
 1. **Desktop app**. Yes, you heard it right. In the era of the web, I want a desktop app. Usually, the browser has dozens of opened tabs across multiple windows. It becomes hard to find the tab with notes (even when it's pinned).
 2. **Quake (drop-down) mode**. I have used the [Quake](https://github.com/Guake/guake/) terminal since 2019. I like it a lot and the most pleasant feature is a drop-down mode. I set a keybinding to the `F1` key and always have my terminal with me. I would like to have the same ability for my note-taking app because I use it often.
-3. **Cross platform**. It should behave the same on _Windows_ and _Linux_. Other platforms mey may be supported too, but it's not a requirement for me.
+3. **Cross platform**. It should behave the same on _Windows_ and _Linux_. Other platforms may may be supported too, but it's not a requirement for me.
 4. **Markdown**. It is simple, easy to learn, and looks good. It contains a perfect set of styling and markup functionality for me.
 
 # Solution
@@ -68,9 +68,9 @@ I wrote a comprehensive explanation of the chosen tech stack. You can read it he
 ![](./md-note.png)
 
 * Quake (drop-down) mode. The keybinding can be configured.
-* Cross platform.
+* Cross-platform.
 * All notes are markdown text. The following MD features are supported:
-  * Italic, bold, strike through text.
+  * Italic, bold, strike-through text.
   * Quotes.
   * Links.
   * Headers.
@@ -78,14 +78,14 @@ I wrote a comprehensive explanation of the chosen tech stack. You can read it he
   * In-line code and code blocks.
   * Pasting images from clipboard.
 * Files can be attached to the note.
-* All notes are grouped into spaces. So, space is a collection of notes. It has name and avatar picture.
+* All notes are grouped into spaces. So, space is a collection of notes. It has a name and avatar picture.
 * Common keybindings for text editing (like `ctrl+k` for creating links).
-* App can be configured using config file.
+* The app can be configured using the config file.
 * Color scheme also can be configured.
 * Simple note search.
 * Many different keybindings to control the application.
 
-...And more. This a short list of main futures. The full features list and user manual can be found here: [todo](#).
+...And more. This is a short list of main futures. The full features list and user manual can be found here: [Dataans/wiki/User-manual](https://github.com/TheBestTvarynka/Dataans/wiki/User-manual).
 
 # Moving further
 
@@ -97,4 +97,4 @@ I'm going to continue to improve `Dataans` according to my needs. If someone wan
 2. [Dataans: Contributing guide](https://github.com/TheBestTvarynka/Dataans/blob/main/doc/CONTRIBUTING.md).
 3. [Dataans: Technical decisions explained](https://github.com/TheBestTvarynka/Dataans/blob/main/doc/tech_stack.md).
 
-I want to add only one thing: **write small programs for yourself in your favorite languages**. I'm feeling happy every time I use my own app for my needs. Even if your app will do only one task, then still create it. _No better software than software that does useful work._
+I want to add only one thing: **write small programs for yourself in your favorite languages**. I'm feeling happy every time I use my app for my needs. Even if your app will do only one task, then still create it. _No better software than software that does useful work._
