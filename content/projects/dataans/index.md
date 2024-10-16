@@ -45,10 +45,55 @@ All note-taking apps I tried lack one or more features listed below. No one cont
 
 # Solution
 
+These are the two closest apps to what I want:
+
+1. [Telegram](https://telegram.org/). I have plenty of Telegram channels with one subscriber (me) where I save important, useful, and just interesting information. Despite rich Telegram features, you can understand why it isn't suitable.
+2. [Monoline](https://monoline.io/). It supports MD and has pretty UI, but I would like to organize my notes into groups (like messages are organized in channels in Telegram).
+
+I decided to write my note-taking app after many tries and thoughts. The best part of being a programmer is the ability to do everything I want with the software. It's like a limitless power in the virtual world (unfortunately, *everything has a limit*, but we aren't about that).
+
+## Tech stack
+
+We can debate a lot about the best technologies for such a project, but I already made my decision:
+
+* Main programming language: [`Rust`](https://www.rust-lang.org/).
+* App framework: [`Tauri`](https://v2.tauri.app/).
+* Frontend framework: [`Leptos`](https://leptos.dev/).
+
+I wrote a comprehensive explanation of the chosen tech stack. You can read it here: [`tech_stack.md`](https://github.com/TheBestTvarynka/Dataans/blob/main/doc/tech_stack.md).
+
 ## Features
 
-## How to use it
+![](./md-note.png)
+
+* Quake (drop-down) mode. The keybinding can be configured.
+* Cross platform.
+* All notes are markdown text. The following MD features are supported:
+  * Italic, bold, strike through text.
+  * Quotes.
+  * Links.
+  * Headers.
+  * Tables.
+  * In-line code and code blocks.
+  * Pasting images from clipboard.
+* Files can be attached to the note.
+* All notes are grouped into spaces. So, space is a collection of notes. It has name and avatar picture.
+* Common keybindings for text editing (like `ctrl+k` for creating links).
+* App can be configured using config file.
+* Color scheme also can be configured.
+* Simple note search.
+* Many different keybindings to control the application.
+
+...And more. This a short list of main futures. The full features list and user manual can be found here: [todo](#).
 
 # Moving further
 
+I'm going to continue to improve `Dataans` according to my needs. If someone wants some missing functionality, then create an issue or a discussion, and most likely I'll implement it. Or if you are interested in contributing to this project, then read the [`CONTRIBUTING.md`](https://github.com/TheBestTvarynka/Dataans/blob/main/doc/CONTRIBUTING.md) document.
+
 # References & final note
+
+1. [Dataans: Source code](https://github.com/TheBestTvarynka/Dataans/).
+2. [Dataans: Contributing guide](https://github.com/TheBestTvarynka/Dataans/blob/main/doc/CONTRIBUTING.md).
+3. [Dataans: Technical decisions explained](https://github.com/TheBestTvarynka/Dataans/blob/main/doc/tech_stack.md).
+
+I want to add only one thing: **write small programs for yourself in your favorite languages**. I'm feeling happy every time I use my own app for my needs. Even if your app will do only one task, then still create it. _No better software than software that does useful work._
