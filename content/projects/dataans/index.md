@@ -10,6 +10,7 @@ tags = ["rust", "tauri", "leptos", "project"]
 [extra]
 toc = true
 keywords = "Rust, Tauri, Leptos, Note-taking, Markdown"
+thumbnail = "dataans-thumbnail.png"
 +++
 
 Source code: [github/TheBestTvarynka/Dataans](https://github.com/TheBestTvarynka/Dataans/).
@@ -20,7 +21,7 @@ The Dataans is a desktop app that allows you to take notes in the form of markdo
 
 I write notes almost every time I use my computer. Usually, it's small pieces of data/code/docs/links I found during the research or bug fixing. So, I need some place to store them and the ability to find needed pieces of information easily. I used to use a single text file and open it in Notepad or VS Code. After the research, I got the file with almost random symbols:
 
-// 
+![](./notes-example.png)
 
 Do I need to explain that it isn't convenient and hard to find anything? I needed a better solution. I tried other note-taking apps, but every one of them had flaws I didn't like a lot.
 
