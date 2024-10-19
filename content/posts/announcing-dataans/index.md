@@ -1,5 +1,5 @@
 +++
-title = "Announcing Dataans v.1.0"
+title = "Announcing Dataans v.0.1.0"
 date = 2024-10-19
 draft = false
 
@@ -9,7 +9,7 @@ tags = ["rust", "tool", "project", "tauri", "leptos"]
 [extra]
 keywords = "Rust, Tauri, Leptos, Note-taking, Markdown"
 toc = true
-# thumbnail = "miri-thumbnail.png"
+thumbnail = "dataans-thumbnail.png"
 +++
 
 # Intro
@@ -31,6 +31,8 @@ The Dataans is a desktop app that allows you to take notes in the form of markdo
 I already have [a post](https://tbt.qkation.com/projects/dataans/) about the motivation and features I lack in other existing note-taking apps. Please, read the [Motivation](https://tbt.qkation.com/projects/dataans/#motivation) section of the article to understand why I decided to write my own app.
 
 ## Features
+
+![](./md-note.png)
 
 * Quake (drop-down) mode. The keybinding can be configured.
 * Cross-platform.
