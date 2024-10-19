@@ -1,7 +1,7 @@
 +++
 title = "dataans"
 description = "Take notes in markdown snippets grouped into spaces."
-date = 2024-10-16
+date = 2024-10-19
 draft = false
 
 [taxonomies]
