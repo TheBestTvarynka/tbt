@@ -24,20 +24,20 @@ During the initial implementation (PoC phase), I didn't implement any error hand
 
 _**Disclaimer**_: I have experience using `Tauri` only with `Leptos` and other Rust-based frontend frameworks. Error handling approaches may be different when using JS-based frontend frameworks.
 
-# Let's handle the error
+# Set up
 
-I set up a simple project (basically it is a `cargo create-tauri-app` with minimal changes) to demonstrate the approach and the progress: [github/TheBestTvarynka/trash-code/tauri-error-handling](https://github.com/TheBestTvarynka/trash-code/tree/feat/tauri-error-handling/tauri-error-handling). I left a corresponding commit link for each section in this article. So, you can follow this process and even reproduce it with me.
+I set up a simple project (basically it is a `cargo create-tauri-app` with minimal changes) to demonstrate the approach and the progress: [github/TheBestTvarynka/trash-code/265f39bfde2aa9fb10055bfee5031714498f7b28/tauri-error-handling](https://github.com/TheBestTvarynka/trash-code/tree/265f39bfde2aa9fb10055bfee5031714498f7b28/tauri-error-handling). I left a corresponding commit link for each section in this article. So, you can follow this process and even reproduce it with me.
 
-So, what do we have? We have one simple command:
+So, what do we have? We have one simple Tauri command:
 
 ```Rust
-// src-tauri/src/lib.rs
+// Backend: src-tauri/src/lib.rs
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
-// src/backend.rs
+// Frontend: src/backend.rs
 pub async fn greet(name: &str) -> String {
     let args = to_value(&GreetArgs { name }).unwrap();
     
@@ -45,9 +45,9 @@ pub async fn greet(name: &str) -> String {
 }
 ```
 
-## Naive approach
+# Let's handle the error
 
-But usually, most of the commands may fail. We may want to return a `Result` and handle the error on the frontend side. Let's try it. Suppose we need to validate the name. I came up with the following implementation (let's keep it simple):
+Usually, most of the commands may fail. We may want to return a `Result` and handle the error on the frontend side. Let's try it. Suppose we need to validate the name. I came up with the following implementation (let's keep it simple):
 
 ```Rust
 use thiserror::Error;
@@ -113,7 +113,7 @@ _**Lesson 1**_. _All `Error`s must implement the `serde::Serialize` trait_.
 
 What about frontend? How are we going to handle the error? Let's start with the simplest solution:
 
-1. Move the `Error` type to a separate crate `common` which can be used on frontend and backend.
+1. Move the `Error` type to a separate `common` crate which can be used by frontend and backend.
 2. Expect `JsValue` to be parsed into `Result<String, Error>`.
 
 ```Rust
@@ -130,9 +130,9 @@ Oops, we have a problem in runtime:
 
 ![](./err-exception.png)
 
-:sob: But why? According to the documentation ([v2.tauri.app/calling-rust/#error-handling](https://v2.tauri.app/develop/calling-rust/#error-handling)), Tauri command error will be an exception on frontend :confused:. So, we should not expect the `Result<String, Error>`, but handle a JS exception instead.
+But why :sob:? According to the documentation ([v2.tauri.app/calling-rust/#error-handling](https://v2.tauri.app/develop/calling-rust/#error-handling)), Tauri command error will be an exception on frontend :confused:. So, we should not expect the `Result<String, Error>`, but handle a JS exception instead.
 
-OR we can ask `wasm_bindgen` to handle this exception. Tauri docs say nothing about it, but if we open the wasm bindgen documentation instead, we will find this treasure ([wasm-bindgen/attributes/on-js-imports/catch](https://rustwasm.github.io/wasm-bindgen/reference/attributes/on-js-imports/catch.html)):
+Fortunately, we can ask `wasm_bindgen` to handle this exception. Tauri docs say nothing about it, but if we open the wasm-bindgen documentation instead, we will find this treasure ([wasm-bindgen/attributes/on-js-imports/catch](https://rustwasm.github.io/wasm-bindgen/reference/attributes/on-js-imports/catch.html)):
 
 > The `catch` attribute allows catching a JavaScript exception. This can be attached to any imported function or method, and the function must return a `Result` where the `Err` payload is a `JsValue`:
 
@@ -163,7 +163,7 @@ And finally, it works :tada:. Here is the resulting code: [github/TheBestTvarynk
 
 _**Lesson 2**_. _Tauri command error is an exception on frontend. The exception can be caught by using the `catch` attribute of the `#[wasm_bindgen]` macro._
 
-## Bonus: unexpected None
+# Bonus: unexpected None
 
 As you can see from the `invoke` function declaration, command input/output values are serialized into/deserialized from JsValue using the `serde_wasm_bindgen` crate. But we are also aware that the JS type-system and Rust type-system are different. Thus, not all Rust objects can be represented in a JS type-system. Theoretically, we can find a Rust object, that:
 
@@ -206,7 +206,7 @@ Oppps :hushed:. We have `None` instead of `Some(())`. `Some(())` is serialized i
 
 _**Lesson 3**_. _Objects before and after the serialization + deserialization process may be different. Be careful when using types like `()`, `enum`s, etc._
 
-If you say that no one uses the `Option<()>` type, then I will disagree. Try to search for `Option<()>` on GitHub and you will find a lot of applications of this type: [github/search?q=Option%3C%28%29%3E+lang%3ARust+&type=code](https://github.com/search?q=Option%3C%28%29%3E+lang%3ARust+&type=code).
+If you say that no one uses the `Option<()>` type, then I will disagree. Try to search for `Option<()>` on GitHub and you will find many uses of this type: [github/search?q=Option%3C%28%29%3E+lang%3ARust+&type=code](https://github.com/search?q=Option%3C%28%29%3E+lang%3ARust+&type=code).
 
 ![](./github-search.png)
 
