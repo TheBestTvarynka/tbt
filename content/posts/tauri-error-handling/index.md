@@ -23,9 +23,9 @@ During the initial implementation (PoC phase), I didn't implement any error hand
 
 _**Disclaimer**_: I have experience using `Tauri` only with `Leptos` and other Rust-based frontend frameworks. Error handling approaches may be different when using JS-based frontend frameworks.
 
-# Let's handle it
+# Let's handle the error
 
-I set up a simple project (basically it is a `cargo create-tauri-app` with minimal changes) to demonstrate the approach and the progress: [github/TheBestTvarynka/trash-code/tauri-error-handling](https://github.com/TheBestTvarynka/trash-code/tree/feat/tauri-error-handling/tauri-error-handling). This article consists of continuous steps of problem-solving. I left a corresponding commit link for each step in this article. So, you can follow this process and even reproduce it with me.
+I set up a simple project (basically it is a `cargo create-tauri-app` with minimal changes) to demonstrate the approach and the progress: [github/TheBestTvarynka/trash-code/tauri-error-handling](https://github.com/TheBestTvarynka/trash-code/tree/feat/tauri-error-handling/tauri-error-handling). I left a corresponding commit link for each section in this article. So, you can follow this process and even reproduce it with me.
 
 So, what do we have? We have one simple command:
 
@@ -108,7 +108,7 @@ enum Error {
 
 Great. Compilation successful. Alternatively, you can read another explanation and example: [The Tauri Documentation WIP/Inter-Process Communication#error-handling](https://jonaskruckenberg.github.io/tauri-docs-wip/development/inter-process-communication.html#error-handling).
 
-_**Lesson 1**_. All `Error`s must implement the `serde::Serialize` trait.
+_**Lesson 1**_. _All `Error`s must implement the `serde::Serialize` trait_.
 
 What about frontend? How are we going to handle the error? Let's start with the simplest solution:
 
@@ -160,12 +160,76 @@ pub async fn greet(name: &str) -> Result<String, Error> {
 
 And finally, it works :tada:. Here is the resulting code: [github/TheBestTvarynka/trash-code/9f6437fe7799e87439430e483c92c0ed590b12f3/tauri-error-handling](https://github.com/TheBestTvarynka/trash-code/tree/9f6437fe7799e87439430e483c92c0ed590b12f3/tauri-error-handling).
 
-_**Lesson 2**_. Tauri command error is an exception on frontend. The exception can be caught by using the `catch` attribute of the `#[wasm_bindgen]` macro.
+_**Lesson 2**_. _Tauri command error is an exception on frontend. The exception can be caught by using the `catch` attribute of the `#[wasm_bindgen]` macro._
 
-# Lessons we learned
+## Bonus: unexpected None
+
+As you can see from the `invoke` function declaration, command input/output values are serialized into/deserialized from JsValue using the `serde_wasm_bindgen` crate. But we are also aware that the JS type-system and Rust type-system are different. Thus, not all Rust objects can be represented in a JS type-system. Theoretically, we can find a Rust object, that:
+
+```Rust
+obj == serde_wasm_bindgen::from_value(serde_wasm_bindgen::to_value::(&obj).unwrap()).unwrap()
+// false
+```
+
+I mean, objects before and after the serialization + deserialization process are not the same. It was theoretical until yesterday when I faced it in practice :zany_face:. Suppose we have the following Tauri command:
+
+```Rust
+#[tauri::command]
+fn greet(name: &str) -> Option<()> {
+    // do the work here
+
+    Some(())
+}
+```
+
+And the corresponding code on frontend side:
+
+```Rust
+pub async fn greet(name: &str) -> Option<()> {
+    let args = to_value(&GreetArgs { name }).expect("GreetArgs to JsValue should not fail");
+
+    let js_value = invoke("greet", args).await.expect("should not fail");
+
+    let result: Option<()> = from_value(js_value).expect("deserialization should not fail");
+    info!("Result: {:?}", result);
+
+    result
+}
+```
+
+Let's try it.
+
+![](./none-value.png)
+
+Oppps :hushed:. We have `None` instead of `Some(())`. `Some(())` is serialized in `undefined` and `undefined` is deserialized in `None`. You should be very careful with `()` and `enum`s. You can reproduce it by yourself: [github/TheBestTvarynka/trash-code/4a4f62d1d55687cc02538408ceb9eb6fee93187f/tauri-error-handling](https://github.com/TheBestTvarynka/trash-code/tree/4a4f62d1d55687cc02538408ceb9eb6fee93187f/tauri-error-handling).
+
+_**Lesson 3**_. _Objects before and after the serialization + deserialization process may be different. Be careful when using types like `()`, `enum`s, etc._
+
+If you say that no one uses the `Option<()>` type, then I will disagree. Try to search for `Option<()>` on GitHub and you will find a lot of applications of this type: [github/search?q=Option%3C%28%29%3E+lang%3ARust+&type=code](https://github.com/search?q=Option%3C%28%29%3E+lang%3ARust+&type=code).
+
+![](./github-search.png)
+
+# Learned lessons
 
 1. All `Error`s must implement the `serde::Serialize` trait.
-2. Tauri command error is an exception on frontend. The exception can be caught by using the `catch` attribute of the `#[wasm_bindgen]` macro.
+2. Tauri command error (`Result::Err(E)`) is an exception on frontend. The exception can be caught by using the `catch` attribute of the `#[wasm_bindgen]` macro.
+3. The JS type-system and Rust type-system are different. Objects before and after the serialization + deserialization process may be different.
+
+**Fun fact.** This article looks nothing like the one I planned. I didn't know about the `catch` attribute before writing the article. I discovered it accidentally :zany_face:. I even wrote my own `Result` and `Unit` types to implement proper error handling: [github/TheBestTvarynka/Dataans/3f2b97e81cbe8b6c4cd0fffc6d0b44c0a8c4e748/dataans/common/src/error.rs](https://github.com/TheBestTvarynka/Dataans/blob/3f2b97e81cbe8b6c4cd0fffc6d0b44c0a8c4e748/dataans/common/src/error.rs) (but now I plan to delete them).
+
+> \> refactored error handling in my Tauri project
+>
+> \> it turned out harder than I thought
+>
+> \> decided to write a blog post about error handling in Tauri
+>
+> \> while writing the blog post I found out that I could have done it much easier
+>
+> \> now I am going to refactor the error handling again
+
+I like this side effect of writing articles. Most likely, you will do some research, investigation, and code examples to better explain your idea. Almost every time I write a blog post I discover something new for me.
+
+4. Writing blog posts is a good way to learn something more deeply :star_struck:.
 
 # Doc, references, code
 
