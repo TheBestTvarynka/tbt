@@ -9,6 +9,7 @@ tags = ["recipes", "rust", "tauri", "leptos"]
 [extra]
 keywords = "Rust, Tauri, Leptos"
 toc = true
+thumbnail = "tauri-error-handling-thumbnail.png"
 +++
 
 # Intro
