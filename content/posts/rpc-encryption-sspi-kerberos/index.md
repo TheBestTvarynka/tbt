@@ -243,6 +243,16 @@ let rrc = 28;
 let wrap_token = wrap_token_header | rotate_right(ciphertext | checksum, rrc);
 ```
 
+The very last step is to split the resulting Wrap Token into buffers and write them into corresponding input buffers (input message).
+
+// todo
+
+Alternatively, you can read Microsoft's example of the message encryption. [[MS-KILE]: `GSS_WrapEx` with `AES128-CTS-HMAC-SHA1-96`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/ade7594d-5934-42e0-994e-93fa0fd1f359):
+
+![](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/ms-kile_files/image004.png)
+
+The picture above shows the same process but with two buffers to encrypt instead of one. `clearhdr` - Wrap Token header. `padding` = `ec * 0x00`.
+
 Phew :face_exhaling: I hope you are not tired because we are going to implement it :hugs:.
 
 # Code: Encryptor
