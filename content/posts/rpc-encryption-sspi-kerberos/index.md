@@ -33,7 +33,7 @@ This blog post is only about encrypting and decrypting RPC PDUs.
 
 I assume the reader has enough knowledge and experience with RPC and SSPI to read this article. If not, I highly recommend reading the following articles (they should give enough context to understand what I am going to do):
 
-* [RPC Encryption – An Exercise in Frustration](https://www.bloggingforlogging.com/2023/04/28/rpc-encryption-an-exercise-in-frustration/).
+* [RPC Encryption - An Exercise in Frustration](https://www.bloggingforlogging.com/2023/04/28/rpc-encryption-an-exercise-in-frustration/).
 * [SSPI introduction](https://tbt.qkation.com/posts/sspi-introduction/).
 
 Microsoft frequently uses the RPC for local and remote calls. Of course, many remote RPC calls are encrypted, and the caller needs to pass the authentication to be able to communicate with the server.
@@ -50,7 +50,7 @@ Captured RPC communication shows us all authentication steps and encrypted `GetK
 
 # RPC PDU structure
 
-(Alternatively, you can read the _RPC Payload_ section from the [RPC Encryption – An Exercise in Frustration](https://www.bloggingforlogging.com/2023/04/28/rpc-encryption-an-exercise-in-frustration/) article).
+(Alternatively, you can read the _RPC Payload_ section from the [RPC Encryption - An Exercise in Frustration](https://www.bloggingforlogging.com/2023/04/28/rpc-encryption-an-exercise-in-frustration/) article).
 
 RPC PDU is usually split into three parts ([https://pubs.opengroup.org/onlinepubs/9629399/chap12.htm](https://pubs.opengroup.org/onlinepubs/9629399/chap12.htm)):
 
@@ -151,14 +151,109 @@ message[3] = checksum(message[0] | message[1] | message[2]);
 
 # Kerberos::EncryptMessage
 
-Phew :face_exhaling:
-
 Now that we have enough knowledge about the encryption process, we can talk about concrete encryption algorithms. The client can authenticate using one of the available protocols (security packages) like NTLM or Kerberos. The most secure these days is, of course, Kerberos. Our task is to understand how it works and implement it.
+
+First, I should mention that the `Kerberos::EncryptMessage` function behaves as the [`GSS_WrapEx`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/e94b3acd-8415-4d0d-9786-749d0c39d550) function. It encrypts the data, constructs a Wrap Token, and writes it in the input message. The wrap token construction and encryption process are defined in [RPC 4121](https://www.rfc-editor.org/rfc/rfc4121.html). Let's recall [the token structure](https://www.rfc-editor.org/rfc/rfc4121.html#section-4.2.6.2):
+
+```
+Octet no   Name        Description
+--------------------------------------------------------------
+ 0..1     TOK_ID    Identification field.  Tokens emitted by
+                    GSS_Wrap() contain the hex value 05 04
+                    expressed in big-endian order in this
+                    field.
+ 2        Flags     Attributes field, as described in section
+                    4.2.2.
+ 3        Filler    Contains the hex value FF.
+ 4..5     EC        Contains the "extra count" field, in big-
+                    endian order as described in section 4.2.3.
+ 6..7     RRC       Contains the "right rotation count" in big-
+                    endian order, as described in section
+                    4.2.5.
+ 8..15    SND_SEQ   Sequence number field in clear text,
+                    expressed in big-endian order.
+ 16..last Data      Encrypted data for Wrap tokens with
+                    confidentiality, or plaintext data followed
+                    by the checksum for Wrap tokens without
+                    confidentiality, as described in section
+                    4.2.4.
+```
+
+This can look familiar to you because we saw this structure in the Wireshark:
+
+![](./krb-wrap-token.png)
+
+If we want to decrypt the RPC request, then we need to the know meaning of each field:
+
+|name|meaning|
+|-|-|
+| `TOK_ID` | `0x0504` |
+| `Flags` | They depend on the authentication process. |
+| `Filler` | `0xff` |
+| `EC` | [RFC 4121: EC Field](https://www.rfc-editor.org/rfc/rfc4121.html#section-4.2.3). It represents how many filler bytes we must insert after the plaintext data before encryption. In our case, it is equal to **16** ([The sender should set extra count (EC) to 1 block - 16 bytes.](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/e94b3acd-8415-4d0d-9786-749d0c39d550)) |
+| `RRC` | In our case, it is equal to **28**. [The RRC field is 12 if no encryption is requested or 28 if encryption is requested.](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/e94b3acd-8415-4d0d-9786-749d0c39d550) |
+| `SND_SEQ` | This value is set by the Kerberos implementation. |
+
+It might not make much sense to you so far, but soon enough, you will have one picture.
+
+RFC 4121 also defines [the encryption process](https://www.rfc-editor.org/rfc/rfc4121.html#section-4.2.4):
+
+> The resulting Wrap token is `{"header" | encrypt(plaintext-data | filler | "header")}`, where `encrypt()` is the encryption operation.
+
+It looks simple, and I think you got the idea. But there is a tricky moment. The negotiated Kerberos encryption algorithms is `AES256-CTS-HMAC-SHA1-96`. This algorithm has two specific features:
+
+* It adds a checksum (hmac) over the plaintext to the ciphertext.
+* It prepends a one block of random bytes (named _confounder_) to the plaintext data before encryption (it is a non-deterministic encryption).
+
+So, the actual encryption scheme is a bit more complex and looks something like this:
+
+```rust
+// pseudocode
+// I hope you didn't forget the `message` array from the previous pseudo code block.
+
+let ec = 16;
+let filler = ec * 0x00;
+let confounder = rand::<[u8; 16]>();
+
+let data_to_encrypt = message[1] | filler | empty_wrap_token_header;
+let ciphertext = encrypt(confounder | data_to_encrypt);
+
+let data_to_hmac = confounder | message[0] | message[1] | message[2] | filler | empty_wrap_token_header;
+let checksum = hmac(data_to_hmac);
+
+let wrap_token = wrap_token_header | ciphertext | checksum;
+```
+
+> _Cool. Can we finally write the resulting Wrap Token to input buffers?_
+
+Not yet :hand_over_mouth:. The RFC also defined the right rotation operation after the encryption. [RFC 4121: RRC Field](https://www.rfc-editor.org/rfc/rfc4121.html#section-4.2.5):
+
+> The "RRC" (Right Rotation Count) field in Wrap tokens is added to allow the data to be encrypted in-place by existing SSPI applications.
+>
+> Excluding the first 16 octets of the token header, the resulting Wrap token in the previous section is rotated to the right by "RRC" octets. The net result is that "RRC" octets of trailing octets are moved toward the header.
+>
+> Consider the following as an example of this rotation operation: Assume that the RRC value is 3 and the token before the rotation is `{"header" | aa | bb | cc | dd | ee | ff | gg | hh}`.  The token after rotation would be `{"header" | ff | gg | hh | aa | bb | cc | dd | ee }`.
+
+It means, that we need to do the right-rotation operation on `ciphertext | checksum` and the final Wrap Token looks like this:
+
+```rust
+// pseudocode
+let rrc = 28;
+
+let wrap_token = wrap_token_header | rotate_right(ciphertext | checksum, rrc);
+```
+
+Phew :face_exhaling: I hope you are not tired because we are going to implement it :hugs:.
+
+# Code: Encryptor
+
+# Code: Decryptor
 
 # Doc, references, code
 
-* [RPC Encryption – An Exercise in Frustration](https://www.bloggingforlogging.com/2023/04/28/rpc-encryption-an-exercise-in-frustration/).
+* [RPC Encryption - An Exercise in Frustration](https://www.bloggingforlogging.com/2023/04/28/rpc-encryption-an-exercise-in-frustration/).
 * [[MS-KILE]: Kerberos Binding of `GSS_WrapEx()`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/e94b3acd-8415-4d0d-9786-749d0c39d550).
+* [RPC 4121: The Kerberos Version 5 GSS-API](https://www.rfc-editor.org/rfc/rfc4121.html).
 * [`EncryptMessage` (Kerberos) function](https://learn.microsoft.com/en-us/windows/win32/secauthn/encryptmessage--kerberos).
 * [SecBuffer structure (`sspi.h`)](https://learn.microsoft.com/en-us/windows/win32/api/sspi/ns-sspi-secbuffer).
 * [[MS-RPCE]](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rpce/290c38b1-92fe-4229-91e6-4fc376610c15).
