@@ -114,16 +114,16 @@ Also, we have two possible buffer flags:
 | `SECBUFFER_READONLY` | the data in this buffer is read only and is never can be overwritten by the security package. Usually, this flag is used to inform the security package about something. |
 | `SECBUFFER_READONLY_WITH_CHECKSUM` | The data in this buffer is included in checksum calculation but not in encryption/decryption process. |
 
-As you can see, the message we want to encrypt is an array of buffers. The whole PDU is split into SSPI security buffers and passed to the `SSPI::EncryptMessage` function. This process is described in the _"Message Protection"_ section of the [RPC Encryption – An Exercise in Frustration](https://www.bloggingforlogging.com/2023/04/28/rpc-encryption-an-exercise-in-frustration/) article. In short, it happens as follows:
+As you can see, the message we want to encrypt is an array of buffers. The whole PDU is split into SSPI security buffers and passed to the `SSPI::EncryptMessage` function. This process is described in the _"Message Protection"_ section of the [RPC Encryption - An Exercise in Frustration](https://www.bloggingforlogging.com/2023/04/28/rpc-encryption-an-exercise-in-frustration/) article. In short, it happens as follows:
 
-| | security buffer type + flags | security buffer value |
+| security buffer type + flags | security buffer value | made-up name |
 |-|-|-|
-| 1 | `SECBUFFER_DATA` + `SECBUFFER_READONLY_WITH_CHECKSUM` | contains PDU header + PDU body header |
-| 2 | `SECBUFFER_DATA` | contains PDU body data to be encrypted (in-place) |
-| 3 | `SECBUFFER_DATA` + `SECBUFFER_READONLY_WITH_CHECKSUM` | contains PDU security trailer header |
-| 4 | `SECBUFFER_TOKEN` | will contain PDU security trailer auth value |
+| `SECBUFFER_DATA` + `SECBUFFER_READONLY_WITH_CHECKSUM` | contains PDU header + PDU body header | Sign1 |
+| `SECBUFFER_DATA` | contains PDU body data to be encrypted (in-place) | Enc |
+| `SECBUFFER_DATA` + `SECBUFFER_READONLY_WITH_CHECKSUM` | contains PDU security trailer header | Sign2 |
+| `SECBUFFER_TOKEN` | will contain PDU security trailer auth value | Token |
 
-It can be illustrated on the previous RPC request that we used as the example:
+We will refer to these buffers a lot, so I added made-up names to each of them. This can be illustrated on the previous RPC request that we used as the example:
 
 ![](./pdu-to-sspi-buffers.png)
 
@@ -140,10 +140,10 @@ We have 4 buffers as an input message. The general encryption process looks like
 ```rust
 // pseudo code
 
-// message[0] is PDU header + PDU body header. SECBUFFER_DATA + SECBUFFER_READONLY_WITH_CHECKSUM.
-// message[1] is PDU body data. we need to encrypt it. SECBUFFER_DATA.
-// message[2] is PDU security trailer header. SECBUFFER_DATA + SECBUFFER_READONLY_WITH_CHECKSUM.
-// message[3] is PDU security trailer auth value. Currently, this buffer is blank (memory is allocated). SECBUFFER_TOKEN.
+// Sign1: message[0] is PDU header + PDU body header. SECBUFFER_DATA + SECBUFFER_READONLY_WITH_CHECKSUM.
+// Enc: message[1] is PDU body data. we need to encrypt it. SECBUFFER_DATA.
+// Sign2: message[2] is PDU security trailer header. SECBUFFER_DATA + SECBUFFER_READONLY_WITH_CHECKSUM.
+// Token: message[3] is PDU security trailer auth value. Currently, this buffer is blank (memory is allocated). SECBUFFER_TOKEN.
 
 message[1] = encrypt(message[1]);
 message[3] = checksum(message[0] | message[1] | message[2]);
@@ -234,18 +234,56 @@ Not yet :hand_over_mouth:. The RFC also defined the right rotation operation aft
 >
 > Consider the following as an example of this rotation operation: Assume that the RRC value is 3 and the token before the rotation is `{"header" | aa | bb | cc | dd | ee | ff | gg | hh}`.  The token after rotation would be `{"header" | ff | gg | hh | aa | bb | cc | dd | ee }`.
 
-It means, that we need to do the right-rotation operation on `ciphertext | checksum` and the final Wrap Token looks like this:
+It means, that we need to do the right-rotation operation on `ciphertext | checksum`. But pay attention here: [we must rotate it by **RRC + RC** bytes](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/e94b3acd-8415-4d0d-9786-749d0c39d550). The final Wrap Token looks like this:
 
 ```rust
 // pseudocode
 let rrc = 28;
+let ec = 16;
 
-let wrap_token = wrap_token_header | rotate_right(ciphertext | checksum, rrc);
+let wrap_token = wrap_token_header | rotate_right(ciphertext | checksum, rrc + ec);
 ```
 
-The very last step is to split the resulting Wrap Token into buffers and write them into corresponding input buffers (input message).
+The very last step is to split the resulting Wrap Token into buffers and write them into corresponding input buffers (input message). Let's recall the task. We have 4 input buffers:
 
-// todo
+- Sign1: `Data` buffer with `SECBUFFER_READONLY_WITH_CHECKSUM`.
+- Enc: `Data` buffer.
+- Sign2: `Data` buffer with `SECBUFFER_READONLY_WITH_CHECKSUM`.
+- Token: `Token` buffer.
+
+And now we need to write the Wrap Token buffer into the second and third buffers. To do it correctly, we write first `cbSecurityTrailer` bytes of the Wrap Token into the Token buffer, and the rest of the Wrap Token should be written into the Enc buffer.
+
+```rust
+// pseudocode
+let cb_security_trailer = 76;
+
+let (token, data) = wrap_token.split_at(cb_security_trailer);
+
+// Write into the Enc buffer
+message[1].copy_from_slice(data);
+// Write into the Token buffer
+message[3].copy_from_slice(token);
+```
+
+Some curious readers may ask me:
+
+> _Why can't we fill the Enc buffer first and then just write the rest of the Wrap Token into the Token buffer? Most likely because the RPC server expects the same buffers, as you just explained._
+>
+> _But the question is why it works this way and not another._
+
+Some things are done on purpose, while others are simply historical heritage (legacy). If you write down all these data manipulations, you can notice that, in the end, the Enc buffer ciphertext matches the original data. The checksum, encrypted confounder, and Wrap Token header will be in the Token buffer. Look at the scheme below:
+
+![](./rpc-encryption-full-diagram.png)
+
+I tried to show the whole encryption process in the diagram above. As you can see, the encrypted Enc buffer data is written directly into the Enc buffer. But the Wrap Token Header, encrypted confounder, filler, etc., are written exclusively in the Token buffer.
+
+## Assumptions
+
+Now we know all the details of the encryption process. Of course, we can't know all the reasons behind Microsoft's decisions regarding their protocols and implementations. But for now, I can make a few **_assumptions_**:
+
+- **Why do we need to rotate `ciphertext | checksum`?**. To make the encrypted Enc buffer data matches the unencrypted one. This way, the encryption will be _in-place_.
+- **Why is the EC value equal to 16?**. Just to extend the ciphertext (to make it longer on purpose). **Why do we need to make it longer?** Kerberos AES256-CTS-HMAC-SHA1-96 encryption algorithm uses AES256 in [CTS mode](https://en.wikipedia.org/wiki/Ciphertext_stealing). In short, it changes last two blocks of ciphertext, so the padding is unnecessary. To ensure that the encrypted Enc buffer data is not affected during CTS (cipher text stealing) (otherwise, it would be impossible for the encrypted Enc buffer data to match the unencrypted one), we need to be sure that the last two blocks of the ciphertext do not contain the Enc buffer data. Thus, we have two block: the first block is the filler bytes (`0x00 * 16`) and the second block is wrap token header (16 bytes long).
+- **Why is the `cbSecurityTrailer` value equal to 76?** wrap token header len + confounder len + filler len + wrap token header (encrypted) len + checksum len = 16 + 16 + 16 + 16 + 12 = 76.
 
 Alternatively, you can read Microsoft's example of the message encryption. [[MS-KILE]: `GSS_WrapEx` with `AES128-CTS-HMAC-SHA1-96`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/ade7594d-5934-42e0-994e-93fa0fd1f359):
 
