@@ -508,9 +508,118 @@ fn encrypt(key: &[u8], key_usage: i32, send_seq: u64, message: &mut [SecBuffer<'
 }
 ```
 
-That's all! We just implemented RPC Kerberos encryption!
+That's all! We just implemented RPC Kerberos encryption! :sunglasses: :partying_face:
 
 # Code: Decryptor
+
+_**Note**. The full code is available here: RPC decryptor [github/TheBestTvarynka/trash-code/rpc-decryptor](https://github.com/TheBestTvarynka/trash-code/tree/feat/rpc-kerberos-encryption/rpc-decryptor)._
+
+I didn't explain the decryption process in detail, but it is completely the reverse of encryption. Look at the scheme below (you may need to zoom or open it in a new tab):
+
+![](./rpc-decryption-full-diagram.png)
+
+As you can see, the decryption process is reversed encryption process (obviously, makes sense). Time to start implementing it. We start from the Wrap Token construction and splitting it into header and encrypted part.
+
+```rust
+fn decrypt(key: &[u8], key_usage: i32, message: &mut [SecBuffer<'_>]) {
+    let mut wrap_token = message
+        .iter_mut()
+        .find(|sec_buffer| sec_buffer.buffer_type == TOKEN)
+        .expect("TOKEN buffer not found")
+        .data
+        .to_vec();
+    message.iter().for_each(|sec_buffer| {
+        if sec_buffer.buffer_type == DATA {
+            wrap_token.extend_from_slice(sec_buffer.data);
+        }
+    });
+
+    let (wrap_token_header, encrypted) = wrap_token.split_at_mut(16 /* Wrap Token header length */);
+    let wrap_token_header = WrapTokenHeader::from_bytes(wrap_token_header as &[u8]);
+
+    encrypted.rotate_left(usize::from(wrap_token_header.rrc + wrap_token_header.ec));
+
+    todo!()
+}
+```
+
+Then, we do the left rotation and data decryption:
+
+```rust
+fn decrypt(key: &[u8], key_usage: i32, message: &mut [SecBuffer<'_>]) {
+    /// ...
+    
+    encrypted.rotate_left(usize::from(wrap_token_header.rrc + wrap_token_header.ec));
+
+    let cipher = Aes256CtsHmacSha196::new();
+
+    let DecryptWithoutChecksum {
+        plaintext,
+        confounder,
+        checksum,
+        ki: _,
+    } = cipher.decrypt_no_checksum(&key, key_usage, encrypted).unwrap();
+
+    let plaintext_len = plaintext.len() - usize::from(wrap_token_header.ec + 16 /* Wrap Token header length */);
+
+    // plaintext - decrypted data.
+    // data - filler + wrap token.
+    let (plaintext, data) = plaintext.split_at(plaintext_len);
+
+    todo!()
+}
+```
+
+Nice! And, of course, we need to calculate the checksum and compare it with the provided one.
+
+```rust
+fn decrypt(key: &[u8], key_usage: i32, message: &mut [SecBuffer<'_>]) {
+    /// ...
+    
+    let mut decrypted = plaintext;
+    let mut data_to_sign = message.iter().fold(confounder, |mut acc, sec_buffer| {
+        if sec_buffer.buffer_type == DATA | READONLY_WITH_CHECKSUM_FLAG {
+            acc.extend_from_slice(sec_buffer.data);
+        } else if sec_buffer.buffer_type == DATA {
+            acc.extend_from_slice(&decrypted[0..sec_buffer.data.len()]);
+            decrypted = &decrypted[sec_buffer.data.len()..];
+        }
+
+        acc
+    });
+    // + Filler + Wrap token header
+    data_to_sign.extend_from_slice(data);
+
+    let calculated_checksum = cipher.encryption_checksum(&key, key_usage, &data_to_sign).unwrap();
+
+    if calculated_checksum != checksum {
+        panic!("Checksum mismatch: message is altered");
+    }
+
+    todo!()
+}
+```
+
+:face_exhaling: And the last one: copying the plaintext to the input `message`.
+
+```rust
+fn decrypt(key: &[u8], key_usage: i32, message: &mut [SecBuffer<'_>]) {
+    /// ...
+    
+    let mut decrypted = plaintext;
+    message
+        .iter_mut()
+        .filter(|sec_buffer| sec_buffer.buffer_type == DATA)
+        .for_each(|sec_buffer| {
+            sec_buffer.data.copy_from_slice(&decrypted[0..sec_buffer.data.len()]);
+            decrypted = &decrypted[sec_buffer.data.len()..];
+        });
+}
+```
+
+:confetti_ball: :partying_face: That's all! Now we have encryptor and decryptor implemented. 
+
+# Code: testing
 
 # Doc, references, code
 
