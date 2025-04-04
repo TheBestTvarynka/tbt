@@ -1,6 +1,6 @@
 +++
 title = "Implementing RPC encryption in SSPI"
-date = 2025-03-30
+date = 2025-04-05
 draft = false
 
 [taxonomies]
@@ -45,6 +45,8 @@ Let's take, for example, [[MS-GKDI]: Group Key Distribution Protocol](https://le
 It specifies only one [`GetKey`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-gkdi/4cac87a3-521e-4918-a272-240f8fabed39) RPC method. I hope it's obvious that the key is encrypted and cannot be sent over the network as a plaintext.
 
 ![](./encrypted-rpc-request.png)
+
+(If you want to open and analyze this packet with me, then here is a Wireshark recording: [rpc.pcapng](./rpc.pcapng).)
 
 Captured RPC communication shows us all authentication steps and encrypted `GetKey` RPC method call. And we will decrypt it at the end of this article :sunglasses:.
 
@@ -295,9 +297,11 @@ Phew :face_exhaling: I hope you are not tired because we are going to implement 
 
 # Code: Encryptor
 
-_**Note**. The full code is available here: RPC decryptor [github/TheBestTvarynka/trash-code/rpc-decryptor](https://github.com/TheBestTvarynka/trash-code/tree/feat/rpc-kerberos-encryption/rpc-decryptor)._
+_**Note 1**. The full code is available here: RPC decryptor [github/TheBestTvarynka/trash-code/rpc-decryptor](https://github.com/TheBestTvarynka/trash-code/tree/feat/rpc-kerberos-encryption/rpc-decryptor)._
 
-Let's start from simple things. Here is a simple [`SecBuffer`](https://learn.microsoft.com/en-us/windows/win32/api/sspi/ns-sspi-secbuffer) implementation. We don't need nothing more complex.
+_**Note 2**. Note. All the code in this article is not production-ready! The only purpose of the code below is to show the algorithm's correctness._
+
+Let's start from simple things. Here is a small [`SecBuffer`](https://learn.microsoft.com/en-us/windows/win32/api/sspi/ns-sspi-secbuffer) implementation. We don't need nothing more complex.
 
 ```rust
 pub const DATA: u32 = 1;
@@ -305,7 +309,6 @@ pub const TOKEN: u32 = 2;
 
 pub const READONLY_WITH_CHECKSUM_FLAG: u32 = 0x10000000;
 
-#[derive(Debug)]
 pub struct SecBuffer<'data> {
     pub buffer_type: u32,
     pub data: &'data mut [u8],
