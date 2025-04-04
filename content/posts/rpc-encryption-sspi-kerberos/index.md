@@ -215,10 +215,10 @@ let ec = 16;
 let filler = ec * 0x00;
 let confounder = rand::<[u8; 16]>();
 
-let data_to_encrypt = message[1] | filler | empty_wrap_token_header;
+let data_to_encrypt = message[1] | filler | wrap_token_header;
 let ciphertext = encrypt(confounder | data_to_encrypt);
 
-let data_to_hmac = confounder | message[0] | message[1] | message[2] | filler | empty_wrap_token_header;
+let data_to_hmac = confounder | message[0] | message[1] | message[2] | filler | wrap_token_header;
 let checksum = hmac(data_to_hmac);
 
 let wrap_token = wrap_token_header | ciphertext | checksum;
@@ -282,7 +282,7 @@ I tried to show the whole encryption process in the diagram above. As you can se
 Now we know all the details of the encryption process. Of course, we can't know all the reasons behind Microsoft's decisions regarding their protocols and implementations. But for now, I can make a few **_assumptions_**:
 
 - **Why do we need to rotate `ciphertext | checksum`?**. To make the encrypted Enc buffer data matches the unencrypted one. This way, the encryption will be _in-place_.
-- **Why is the EC value equal to 16?**. Just to extend the ciphertext (to make it longer on purpose). **Why do we need to make it longer?** Kerberos AES256-CTS-HMAC-SHA1-96 encryption algorithm uses AES256 in [CTS mode](https://en.wikipedia.org/wiki/Ciphertext_stealing). In short, it changes last two blocks of ciphertext, so the padding is unnecessary. To ensure that the encrypted Enc buffer data is not affected during CTS (cipher text stealing) (otherwise, it would be impossible for the encrypted Enc buffer data to match the unencrypted one), we need to be sure that the last two blocks of the ciphertext do not contain the Enc buffer data. Thus, we have two block: the first block is the filler bytes (`0x00 * 16`) and the second block is wrap token header (16 bytes long).
+- **Why is the EC value equal to 16?**. Just to extend the ciphertext (to make it longer on purpose). **Why do we need to make it longer?** Kerberos AES256-CTS-HMAC-SHA1-96 encryption algorithm uses AES256 in [CTS mode](https://en.wikipedia.org/wiki/Ciphertext_stealing). In short, it changes last two blocks of ciphertext, so the padding is unnecessary. To ensure that the encrypted Enc buffer data is not affected during CTS (cipher text stealing) (otherwise, it would be impossible for the encrypted Enc buffer data to match the unencrypted one), we need to be sure that the last two blocks of the ciphertext do not contain the Enc buffer data. Thus, we have two additional blocks: the first block is the filler bytes (`0x00 * 16`) and the second block is wrap token header (16 bytes long).
 - **Why is the `cbSecurityTrailer` value equal to 76?** wrap token header len + confounder len + filler len + wrap token header (encrypted) len + checksum len = 16 + 16 + 16 + 16 + 12 = 76.
 
 Alternatively, you can read Microsoft's example of the message encryption. [[MS-KILE]: `GSS_WrapEx` with `AES128-CTS-HMAC-SHA1-96`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/ade7594d-5934-42e0-994e-93fa0fd1f359):
@@ -295,10 +295,226 @@ Phew :face_exhaling: I hope you are not tired because we are going to implement 
 
 # Code: Encryptor
 
+_**Note**. The full code is available here: RPC decryptor [github/TheBestTvarynka/trash-code/rpc-decryptor](https://github.com/TheBestTvarynka/trash-code/tree/feat/rpc-kerberos-encryption/rpc-decryptor)._
+
+Let's start from simple things. Here is a simple [`SecBuffer`](https://learn.microsoft.com/en-us/windows/win32/api/sspi/ns-sspi-secbuffer) implementation. We don't need nothing more complex.
+
+```rust
+pub const DATA: u32 = 1;
+pub const TOKEN: u32 = 2;
+
+pub const READONLY_WITH_CHECKSUM_FLAG: u32 = 0x10000000;
+
+#[derive(Debug)]
+pub struct SecBuffer<'data> {
+    pub buffer_type: u32,
+    pub data: &'data mut [u8],
+}
+
+impl<'data> SecBuffer<'data> {
+    pub fn new(buffer_type: u32, data: &'data mut [u8]) -> Self {
+        Self { buffer_type, data }
+    }
+}
+```
+
+Now we need a Wrap Token implementation. I don't want to overengineer it. I wrote a simple Wrap Token header encoding/decoding. Again, we don't need nothing more complex.
+
+```rust
+pub struct WrapTokenHeader {
+    pub flags: u8,
+    pub ec: u16,
+    pub rrc: u16,
+    pub send_seq: u64,
+}
+
+impl WrapTokenHeader {
+    pub fn encoded(&self) -> [u8; 16] {
+        let mut header_data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+        header_data[0..2].copy_from_slice(&[0x05, 0x04]);
+        header_data[2] = self.flags;
+        header_data[3] = 0xff;
+        header_data[4..6].copy_from_slice(&self.ec.to_be_bytes());
+        header_data[6..8].copy_from_slice(&self.rrc.to_be_bytes());
+        header_data[8..].copy_from_slice(&self.send_seq.to_be_bytes());
+
+        header_data
+    }
+
+    pub fn from_bytes(mut src: impl Read) -> Self {
+        if src.read_u16::<BigEndian>().unwrap() != 0x0504 {
+            panic!("Invalid Wrap Token ID");
+        }
+
+        let flags = src.read_u8().unwrap();
+
+        let filler = src.read_u8().unwrap();
+        if filler != 0xff {
+            panic!("Invalid filler");
+        }
+
+        let ec = src.read_u16::<BigEndian>().unwrap();
+        let rrc = src.read_u16::<BigEndian>().unwrap();
+        let send_seq = src.read_u64::<BigEndian>().unwrap();
+
+        Self {
+            flags,
+            ec,
+            rrc,
+            send_seq,
+        }
+    }
+}
+```
+
+Great! Now the fun part: encryption implementation. First of all, we should define constants we are going to use.
+
+```rust
+// "Extra count"
+const EC: u16 = 16;
+// "Right Rotation Count"
+const RRC: u16 = 28;
+
+// https://www.rfc-editor.org/rfc/rfc4121.html#section-2
+const CLIENT_ENCRYPTION_KEY_USAGE: i32 = 24;
+const CLIENT_DECRYPTION_KEY_USAGE: i32 = 22;
+
+const SERVER_ENCRYPTION_KEY_USAGE: i32 = CLIENT_DECRYPTION_KEY_USAGE;
+const SERVER_DECRYPTION_KEY_USAGE: i32 = CLIENT_ENCRYPTION_KEY_USAGE;
+
+const CB_SECURITY_TRAILER: usize = 16 /* wrap token header len */
+    + 16 /* confounder len */
+    + EC as usize
+    + 16 /* wrap token header (encrypted) len */
+    + 12 /* checksum (hmac) len */;
+```
+
+You may be surprised by key usage numbers. Don't worry.
+
+> [7.5.1.  Key Usage Numbers](https://www.rfc-editor.org/rfc/rfc4120#section-7.5.1)
+>
+> The encryption and checksum specifications in [RFC3961](https://www.rfc-editor.org/rfc/rfc3961) require as input a _"key usage number"_, to alter the encryption key used in any specific message in order to make certain types of cryptographic attack more difficult.
+
+In other words, a key usage number is a _public_ known value used to derive the encryption key from a base key (session key). You should not care about them. Use values specified in the RFC/specification.
+
+Now we can start implementing RPC encryption. Finally! We start from the Wrap Token and filler generation.
+
+```rust
+fn encrypt(key: &[u8], key_usage: i32, send_seq: u64, message: &mut [SecBuffer<'_>]) {
+    let mut wrap_token_header = WrapTokenHeader {
+        flags: 0x06,
+        ec: EC,
+        rrc: 0,
+        send_seq,
+    };
+    let encoded_wrap_token_header = wrap_token_header.encoded();
+    let filler = vec![0; usize::from(EC)];
+
+    todo!()
+}
+```
+
+Then, we encrypt the data. Let's do it in two steps:
+
+1. Collect the data to encrypt in one buffer: DATA sec buffer + filler + wrap token header.
+2. Encrypt it with the a correct key usage number. There are not many Kerberos algorithms implementations. The only actively used and well maintained one is `picky-krb`: [docs.rs/picky-krb/crypto/aes/](https://docs.rs/picky-krb/latest/picky_krb/crypto/aes/index.html).
+
+```rust
+fn encrypt(key: &[u8], key_usage: i32, send_seq: u64, message: &mut [SecBuffer<'_>]) {
+    /// ...
+
+    // Find the Enc buffer
+    let mut data_to_encrypt = message.iter().fold(Vec::new(), |mut acc, sec_buffer| {
+        if sec_buffer.buffer_type == DATA {
+            acc.extend_from_slice(sec_buffer.data);
+        }
+
+        acc
+    });
+    // + Filler
+    data_to_encrypt.extend_from_slice(&filler);
+    // + Wrap token header
+    data_to_encrypt.extend_from_slice(&encoded_wrap_token_header);
+
+    let cipher = Aes256CtsHmacSha196::new();
+
+    let EncryptWithoutChecksum {
+        mut encrypted,
+        confounder,
+        ki: _,
+    } = cipher.encrypt_no_checksum(key, key_usage, &data_to_encrypt).unwrap();
+
+    todo!()
+}
+```
+
+I hope you didn't forget about confounder. In the code above, it is autogenerated and returned from the `encrypt_no_checksum` function. We need it to correctly calculate HMAC. What is next? Right, checksum calculation.
+
+```rust
+fn encrypt(key: &[u8], key_usage: i32, send_seq: u64, message: &mut [SecBuffer<'_>]) {
+    /// ...
+
+    let mut data_to_sign = message.iter().fold(confounder, |mut acc, sec_buffer| {
+        if sec_buffer.buffer_type == DATA | READONLY_WITH_CHECKSUM_FLAG {
+            acc.extend_from_slice(sec_buffer.data);
+        } else if sec_buffer.buffer_type == DATA {
+            acc.extend_from_slice(sec_buffer.data);
+        }
+
+        acc
+    });
+    // + Filler
+    data_to_sign.extend_from_slice(&filler);
+    // + Wrap token header
+    data_to_sign.extend_from_slice(&encoded_wrap_token_header);
+
+    let checksum = cipher.encryption_checksum(&key, key_usage, &data_to_sign).unwrap();
+    encrypted.extend_from_slice(&checksum);
+
+    todo!()
+}
+```
+
+As you can see, we calculate checksum separately from the encryption because we may have `READONLY_WITH_CHECKSUM_FLAG` buffers which we don't need to encrypt.
+
+:face_exhaling: What's left? Right rotation, final Wrap Token construction, copying the data to the input `message`.
+
+```rust
+fn encrypt(key: &[u8], key_usage: i32, send_seq: u64, message: &mut [SecBuffer<'_>]) {
+    /// ...
+
+    encrypted.rotate_right(usize::from(RRC + EC));
+
+    wrap_token_header.rrc = RRC;
+
+    // final Wrap Token
+    let mut raw_wrap_token = wrap_token_header.encoded().to_vec();
+    raw_wrap_token.extend_from_slice(&encrypted);
+
+    let (token, data) = raw_wrap_token.split_at(CB_SECURITY_TRAILER);
+
+    let token_buffer = message
+        .iter_mut()
+        .find(|sec_buffer| sec_buffer.buffer_type == TOKEN)
+        .expect("TOKEN buffer not found");
+    token_buffer.data.copy_from_slice(token);
+
+    let data_buffer = message
+        .iter_mut()
+        .find(|sec_buffer| sec_buffer.buffer_type == DATA)
+        .expect("DATA buffer not found");
+    data_buffer.data.copy_from_slice(data);
+}
+```
+
+That's all! We just implemented RPC Kerberos encryption!
+
 # Code: Decryptor
 
 # Doc, references, code
 
+* Code: RPC decryptor [github/TheBestTvarynka/trash-code/rpc-decryptor](https://github.com/TheBestTvarynka/trash-code/tree/feat/rpc-kerberos-encryption/rpc-decryptor).
 * [RPC Encryption - An Exercise in Frustration](https://www.bloggingforlogging.com/2023/04/28/rpc-encryption-an-exercise-in-frustration/).
 * [[MS-KILE]: Kerberos Binding of `GSS_WrapEx()`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/e94b3acd-8415-4d0d-9786-749d0c39d550).
 * [RPC 4121: The Kerberos Version 5 GSS-API](https://www.rfc-editor.org/rfc/rfc4121.html).
