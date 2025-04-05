@@ -1,15 +1,15 @@
 +++
-title = "Implementing RPC encryption in SSPI"
+title = "Implementing Kerberos RPC encryption over SSPI"
 date = 2025-04-05
 draft = false
 
 [taxonomies]
-tags = ["kerberos", "rpc", "sspi", "rust"]
+tags = ["kerberos", "rpc", "sspi", "rust", "cryptography"]
 
 [extra]
 keywords = "Kerberos, RPC, SSPI, Rust"
 toc = true
-# thumbnail = "tauri-error-handling-thumbnail.png"
+thumbnail = "thumbnail.png"
 +++
 
 # Intro
@@ -20,7 +20,7 @@ Today's world has many unknown and magical things. Proprietary protocols and lib
 
 * Provide a detailed explanation of how RPC PDUs are encrypted.
 * Explain how it is related to SSPI.
-* Implement RPC PDUs encryption/decryption and test it against real RPC traffic :hand_over_mouth:.
+* Implement RPC PDUs encryption/decryption and test it against **real RPC traffic** :hand_over_mouth:.
 
 ## Non-goals
 
@@ -36,13 +36,13 @@ I assume the reader has enough knowledge and experience with RPC and SSPI to rea
 * [RPC Encryption - An Exercise in Frustration](https://www.bloggingforlogging.com/2023/04/28/rpc-encryption-an-exercise-in-frustration/).
 * [SSPI introduction](https://tbt.qkation.com/posts/sspi-introduction/).
 
-Microsoft frequently uses the RPC for local and remote calls. Of course, many remote RPC calls are encrypted, and the caller needs to pass the authentication to be able to communicate with the server.
+Microsoft frequently uses RPC for local and remote calls. Of course, many remote RPC calls are encrypted, and the caller needs to pass the authentication to communicate with the server.
 
 Let's take, for example, [[MS-GKDI]: Group Key Distribution Protocol](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-gkdi/943dd4f6-6b80-4a66-8594-80df6d2aad0a),
 
 > ...which enables clients to obtain cryptographic keys associated with Active Directory security principals.
 
-It specifies only one [`GetKey`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-gkdi/4cac87a3-521e-4918-a272-240f8fabed39) RPC method. I hope it's obvious that the key is encrypted and cannot be sent over the network as a plaintext.
+It specifies only one [`GetKey`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-gkdi/4cac87a3-521e-4918-a272-240f8fabed39) RPC method. I hope it's obvious that the key is encrypted and cannot be sent over the network as plaintext.
 
 ![](./encrypted-rpc-request.png)
 
@@ -62,19 +62,19 @@ RPC PDU is usually split into three parts ([https://pubs.opengroup.org/onlinepub
 | body | the body of a request or response PDU contains data representing the input or output parameters for an operation |
 | security trailer | contains data specific to an authentication protocol. For example, an authentication protocol may ensure the integrity of a packet via inclusion of an encrypted checksum in the authentication verifier |
 
-But for now, we need to dig a bit deeply. PDU body consists of its own header and data. In turn, PDU security trailer also has its header and auth value. Look at the screenshot below:
+But for now, we need to dig a bit deeply. PDU body consists of its header and data. In turn, the PDU security trailer also has its header and auth value. Look at the screenshot below:
 
 ![](./rpc-pdu-structure.png)
 
-I think you got the idea. PDU body data and security trailer auth value are encrypted in our case.
+I think you've got the idea. In our case, the PDU body data and security trailer auth value are encrypted.
 
-# RPC encryption through SSPI
+# RPC encryption over SSPI
 
 Why SSPI? There are several reasons why:
 
-1. This is how it originally done in Window.
+1. This is how it is originally done in Windows.
 2. Some aspects of the encryption process make sense only with SSPI in mind.
-3. RPC and SSPI are interconnected in many places, so why do not explain the SSPI part.
+3. RPC and SSPI are interconnected in many places, so why not explain the SSPI part?
 
 RPC PDUs are encrypted by calling the [SSPI::EncryptMessage](https://learn.microsoft.com/en-us/windows/win32/api/sspi/nf-sspi-encryptmessage) function (and, correspondingly, decryption is done by calling the [SSPI::DecryptMessage](https://learn.microsoft.com/en-us/windows/win32/api/sspi/nf-sspi-decryptmessage) function). Let's see its interface.
 
@@ -85,6 +85,14 @@ SECURITY_STATUS SEC_ENTRY EncryptMessage(
   [in]      unsigned long  fQOP,
   [in, out] PSecBufferDesc pMessage,
   [in]      unsigned long  MessageSeqNo
+);
+
+// https://learn.microsoft.com/en-us/windows/win32/api/sspi/nf-sspi-decryptmessage
+SECURITY_STATUS SEC_ENTRY DecryptMessage(
+  [in]      PCtxtHandle    phContext,
+  [in, out] PSecBufferDesc pMessage,
+  [in]      unsigned long  MessageSeqNo,
+  [out]     unsigned long  *pfQOP
 );
 
 // https://learn.microsoft.com/en-us/windows/win32/api/sspi/ns-sspi-secbufferdesc
@@ -106,38 +114,38 @@ There are a lot of security buffer types and two security buffer flags defined i
 
 | buffer type | meaning/purpose |
 |-|-|
-| `SECBUFFER_TOKEN` | in general case, it contains the security token portion of the message. In our case, it contains a signature generated by the security package. |
-| `SECBUFFER_DATA` | contains input data to be processed by the security package. In our case, it's just a data we want to encrypt or decrypt. |
+| `SECBUFFER_TOKEN` | in the general case, it contains the security token portion of the message. In our case, it contains a signature generated by the security package. |
+| `SECBUFFER_DATA` | contains input data to be processed by the security package. In our case, it's just data we want to encrypt or decrypt. |
 
 Also, we have two possible buffer flags:
 
 | buffer flag | meaning |
 |-|-|
-| `SECBUFFER_READONLY` | the data in this buffer is read only and is never can be overwritten by the security package. Usually, this flag is used to inform the security package about something. |
-| `SECBUFFER_READONLY_WITH_CHECKSUM` | The data in this buffer is included in checksum calculation but not in encryption/decryption process. |
+| `SECBUFFER_READONLY` | the data in this buffer is read-only and is never can be overwritten by the security package. Usually, this flag is used to inform the security package about something. |
+| `SECBUFFER_READONLY_WITH_CHECKSUM` | The data in this buffer is included in the checksum calculation but not in the encryption/decryption process. |
 
 As you can see, the message we want to encrypt is an array of buffers. The whole PDU is split into SSPI security buffers and passed to the `SSPI::EncryptMessage` function. This process is described in the _"Message Protection"_ section of the [RPC Encryption - An Exercise in Frustration](https://www.bloggingforlogging.com/2023/04/28/rpc-encryption-an-exercise-in-frustration/) article. In short, it happens as follows:
 
-| security buffer type + flags | security buffer value | made-up name |
-|-|-|-|
-| `SECBUFFER_DATA` + `SECBUFFER_READONLY_WITH_CHECKSUM` | contains PDU header + PDU body header | Sign1 |
-| `SECBUFFER_DATA` | contains PDU body data to be encrypted (in-place) | Enc |
-| `SECBUFFER_DATA` + `SECBUFFER_READONLY_WITH_CHECKSUM` | contains PDU security trailer header | Sign2 |
-| `SECBUFFER_TOKEN` | will contain PDU security trailer auth value | Token |
+|| security buffer type + flags | security buffer value | made-up name |
+|-|-|-|-|
+|1| `SECBUFFER_DATA` + `SECBUFFER_READONLY_WITH_CHECKSUM` | contains PDU header + PDU body header | Sign1 |
+|2| `SECBUFFER_DATA` | contains PDU body data to be encrypted (in-place) | Enc |
+|3| `SECBUFFER_DATA` + `SECBUFFER_READONLY_WITH_CHECKSUM` | contains PDU security trailer header | Sign2 |
+|4| `SECBUFFER_TOKEN` | will contain PDU security trailer auth value | Token |
 
-We will refer to these buffers a lot, so I added made-up names to each of them. This can be illustrated on the previous RPC request that we used as the example:
+We will refer to these buffers a lot, so I added made-up names to each of them. This can be illustrated in the previous RPC request that we used as the example:
 
 ![](./pdu-to-sspi-buffers.png)
 
-All encryption is always in-place. The security package overwrites the original data with encrypted data. This also means that the caller must allocate the last security buffer (4th which has the `SECBUFFER_TOKEN` type), and the security package will overwrite it. The caller can get the token buffer length by calling the [`QueryContextAttributes`](https://learn.microsoft.com/en-us/windows/win32/secauthn/querycontextattributes--general) function with the `SECPKG_ATTR_SIZES` parameter. The `cbSecurityTrailer` field of the [`SecPkgContext_Sizes`](https://learn.microsoft.com/en-us/windows/win32/api/sspi/ns-sspi-secpkgcontext_sizes) structure contains a desired value.
+All encryption is always **in-place**. The security package overwrites the original data with encrypted data. This also means that the caller must allocate the last security buffer (4th which has the `SECBUFFER_TOKEN` type), and the security package will overwrite it. The caller can get the token buffer length by calling the [`QueryContextAttributes`](https://learn.microsoft.com/en-us/windows/win32/secauthn/querycontextattributes--general) function with the `SECPKG_ATTR_SIZES` parameter. The `cbSecurityTrailer` field of the [`SecPkgContext_Sizes`](https://learn.microsoft.com/en-us/windows/win32/api/sspi/ns-sspi-secpkgcontext_sizes) structure contains a desired value.
 
 # SSPI::EncryptMessage
 
-Before implementing it, I want to clarify some general function behaviour. As I wrote above, it encrypts the input message in-place. Some security packages, besides encryption, also calculates checksum over the provided data. Even more, some security packages can only calculate a checksum over the provided data. Here is a citation from the MSDN:
+Before implementing it, I want to clarify some general function behavior. As I wrote above, it encrypts the input message in-place. Some security packages, besides encryption, also calculate checksum over the provided data. Even more, some security packages can only calculate a checksum over the provided data. Here is a citation from the [MSDN](https://learn.microsoft.com/en-us/windows/win32/api/sspi/nf-sspi-encryptmessage):
 
 > Some packages do not have messages to be encrypted or decrypted but rather provide an integrity hash that can be checked.
 
-We have 4 buffers as an input message. The general encryption process looks like this:
+In our case, both encryption and integrity hash (hmac) calculations happen. We have 4 buffers as an input message. The general encryption process looks like this:
 
 ```rust
 // pseudo code
@@ -181,11 +189,11 @@ Octet no   Name        Description
                     4.2.4.
 ```
 
-This can look familiar to you because we saw this structure in the Wireshark:
+This can look familiar to you because we already saw this structure in the Wireshark:
 
 ![](./krb-wrap-token.png)
 
-If we want to decrypt the RPC request, then we need to the know meaning of each field:
+If we want to decrypt the RPC request, then we need to know the meaning of each field:
 
 |name|meaning|
 |-|-|
@@ -193,7 +201,7 @@ If we want to decrypt the RPC request, then we need to the know meaning of each 
 | `Flags` | They depend on the authentication process. |
 | `Filler` | `0xff` |
 | `EC` | [RFC 4121: EC Field](https://www.rfc-editor.org/rfc/rfc4121.html#section-4.2.3). It represents how many filler bytes we must insert after the plaintext data before encryption. In our case, it is equal to **16** ([The sender should set extra count (EC) to 1 block - 16 bytes.](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/e94b3acd-8415-4d0d-9786-749d0c39d550)) |
-| `RRC` | In our case, it is equal to **28**. [The RRC field is 12 if no encryption is requested or 28 if encryption is requested.](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/e94b3acd-8415-4d0d-9786-749d0c39d550) |
+| `RRC` | In our case, it is equal to **28**. [The RRC field is 28 if encryption is requested.](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/e94b3acd-8415-4d0d-9786-749d0c39d550) |
 | `SND_SEQ` | This value is set by the Kerberos implementation. |
 
 It might not make much sense to you so far, but soon enough, you will have one picture.
@@ -202,10 +210,10 @@ RFC 4121 also defines [the encryption process](https://www.rfc-editor.org/rfc/rf
 
 > The resulting Wrap token is `{"header" | encrypt(plaintext-data | filler | "header")}`, where `encrypt()` is the encryption operation.
 
-It looks simple, and I think you got the idea. But there is a tricky moment. The negotiated Kerberos encryption algorithms is `AES256-CTS-HMAC-SHA1-96`. This algorithm has two specific features:
+It looks simple, and I think you got the idea. But there is a tricky moment. The negotiated Kerberos encryption algorithm is `AES256-CTS-HMAC-SHA1-96`. This algorithm has two specific features:
 
-* It adds a checksum (hmac) over the plaintext to the ciphertext.
-* It prepends a one block of random bytes (named _confounder_) to the plaintext data before encryption (it is a non-deterministic encryption).
+* It appends a checksum (hmac) over the plaintext to the ciphertext.
+* It prepends one block of random bytes (named _confounder_) to the plaintext data before encryption (it is a non-deterministic encryption).
 
 So, the actual encryption scheme is a bit more complex and looks something like this:
 
@@ -220,8 +228,8 @@ let confounder = rand::<[u8; 16]>();
 let data_to_encrypt = message[1] | filler | wrap_token_header;
 let ciphertext = encrypt(confounder | data_to_encrypt);
 
-let data_to_hmac = confounder | message[0] | message[1] | message[2] | filler | wrap_token_header;
-let checksum = hmac(data_to_hmac);
+let data_to_hmac = message[0] | message[1] | message[2] | filler | wrap_token_header;
+let checksum = hmac(confounder | data_to_hmac);
 
 let wrap_token = wrap_token_header | ciphertext | checksum;
 ```
@@ -230,7 +238,7 @@ let wrap_token = wrap_token_header | ciphertext | checksum;
 
 Not yet :hand_over_mouth:. The RFC also defined the right rotation operation after the encryption. [RFC 4121: RRC Field](https://www.rfc-editor.org/rfc/rfc4121.html#section-4.2.5):
 
-> The "RRC" (Right Rotation Count) field in Wrap tokens is added to allow the data to be encrypted in-place by existing SSPI applications.
+> The "RRC" (Right Rotation Count) field in Wrap tokens is added **to allow the data to be encrypted in-place by existing SSPI applications**.
 >
 > Excluding the first 16 octets of the token header, the resulting Wrap token in the previous section is rotated to the right by "RRC" octets. The net result is that "RRC" octets of trailing octets are moved toward the header.
 >
@@ -253,7 +261,7 @@ The very last step is to split the resulting Wrap Token into buffers and write t
 - Sign2: `Data` buffer with `SECBUFFER_READONLY_WITH_CHECKSUM`.
 - Token: `Token` buffer.
 
-And now we need to write the Wrap Token buffer into the second and third buffers. To do it correctly, we write first `cbSecurityTrailer` bytes of the Wrap Token into the Token buffer, and the rest of the Wrap Token should be written into the Enc buffer.
+And now we need to write the Wrap Token buffer into the second and fourth buffers. To do it correctly, we write first `cbSecurityTrailer` bytes of the Wrap Token into the Token buffer, and the rest of the Wrap Token should be written into the Enc buffer.
 
 ```rust
 // pseudocode
@@ -283,8 +291,8 @@ I tried to show the whole encryption process in the diagram above. As you can se
 
 Now we know all the details of the encryption process. Of course, we can't know all the reasons behind Microsoft's decisions regarding their protocols and implementations. But for now, I can make a few **_assumptions_**:
 
-- **Why do we need to rotate `ciphertext | checksum`?**. To make the encrypted Enc buffer data matches the unencrypted one. This way, the encryption will be _in-place_.
-- **Why is the EC value equal to 16?**. Just to extend the ciphertext (to make it longer on purpose). **Why do we need to make it longer?** Kerberos AES256-CTS-HMAC-SHA1-96 encryption algorithm uses AES256 in [CTS mode](https://en.wikipedia.org/wiki/Ciphertext_stealing). In short, it changes last two blocks of ciphertext, so the padding is unnecessary. To ensure that the encrypted Enc buffer data is not affected during CTS (cipher text stealing) (otherwise, it would be impossible for the encrypted Enc buffer data to match the unencrypted one), we need to be sure that the last two blocks of the ciphertext do not contain the Enc buffer data. Thus, we have two additional blocks: the first block is the filler bytes (`0x00 * 16`) and the second block is wrap token header (16 bytes long).
+- **Why do we need to rotate `ciphertext | checksum`?**. To make the encrypted Enc buffer data match the unencrypted one. This way, the encryption will be _in-place_.
+- **Why is the EC value equal to 16?**. Just to extend the ciphertext (to make it longer on purpose). **Why do we need to make it longer?** Kerberos AES256-CTS-HMAC-SHA1-96 encryption algorithm uses AES256 in [CTS mode](https://en.wikipedia.org/wiki/Ciphertext_stealing). In short, it changes the last two blocks of ciphertext, so the padding is unnecessary. To ensure that the encrypted Enc buffer data is not affected during CTS (cipher text stealing) (otherwise, it would be impossible for the encrypted Enc buffer data to match the unencrypted one), we need to be sure that the last two blocks of the ciphertext do not contain the Enc buffer data. Thus, we have two additional blocks: the first block is the filler bytes (`0x00 * 16`) and the second block is the Wrap Token header (16 bytes long).
 - **Why is the `cbSecurityTrailer` value equal to 76?** wrap token header len + confounder len + filler len + wrap token header (encrypted) len + checksum len = 16 + 16 + 16 + 16 + 12 = 76.
 
 Alternatively, you can read Microsoft's example of the message encryption. [[MS-KILE]: `GSS_WrapEx` with `AES128-CTS-HMAC-SHA1-96`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/ade7594d-5934-42e0-994e-93fa0fd1f359):
@@ -299,9 +307,9 @@ Phew :face_exhaling: I hope you are not tired because we are going to implement 
 
 _**Note 1**. The full code is available here: RPC decryptor [github/TheBestTvarynka/trash-code/rpc-decryptor](https://github.com/TheBestTvarynka/trash-code/tree/feat/rpc-kerberos-encryption/rpc-decryptor)._
 
-_**Note 2**. Note. All the code in this article is not production-ready! The only purpose of the code below is to show the algorithm's correctness._
+_**Note 2**. The code in this article is not production-ready! **The only purpose of the code below is to show the algorithm's correctness.**_
 
-Let's start from simple things. Here is a small [`SecBuffer`](https://learn.microsoft.com/en-us/windows/win32/api/sspi/ns-sspi-secbuffer) implementation. We don't need nothing more complex.
+Let's start with simple things. Here is a small [`SecBuffer`](https://learn.microsoft.com/en-us/windows/win32/api/sspi/ns-sspi-secbuffer) implementation. We don't need anything more complex.
 
 ```rust
 pub const DATA: u32 = 1;
@@ -321,7 +329,7 @@ impl<'data> SecBuffer<'data> {
 }
 ```
 
-Now we need a Wrap Token implementation. I don't want to overengineer it. I wrote a simple Wrap Token header encoding/decoding. Again, we don't need nothing more complex.
+Now we need a Wrap Token implementation. I don't want to overengineer it. I wrote a simple Wrap Token header encoding/decoding. Again, we don't need anything more complex.
 
 ```rust
 pub struct WrapTokenHeader {
@@ -371,7 +379,7 @@ impl WrapTokenHeader {
 }
 ```
 
-Great! Now the fun part: encryption implementation. First of all, we should define constants we are going to use.
+Great! Now the fun part: encryption implementation. First of all, we should define the constants we are going to use.
 
 ```rust
 // "Extra count"
@@ -397,11 +405,11 @@ You may be surprised by key usage numbers. Don't worry.
 
 > [7.5.1.  Key Usage Numbers](https://www.rfc-editor.org/rfc/rfc4120#section-7.5.1)
 >
-> The encryption and checksum specifications in [RFC3961](https://www.rfc-editor.org/rfc/rfc3961) require as input a _"key usage number"_, to alter the encryption key used in any specific message in order to make certain types of cryptographic attack more difficult.
+> The encryption and checksum specifications in [RFC3961](https://www.rfc-editor.org/rfc/rfc3961) require as input a _"key usage number"_, to alter the encryption key used in any specific message to make certain types of cryptographic attack more difficult.
 
-In other words, a key usage number is a _public_ known value used to derive the encryption key from a base key (session key). You should not care about them. Use values specified in the RFC/specification.
+In other words, a key usage number is a _public_ known value used to derive the encryption key from a base key (session key). You should not care about it. We always use key usage numbers specified in the RFC/specification.
 
-Now we can start implementing RPC encryption. Finally! We start from the Wrap Token and filler generation.
+Now we can start implementing RPC encryption. Finally! We start with the Wrap Token and filler generation.
 
 ```rust
 fn encrypt(key: &[u8], key_usage: i32, send_seq: u64, message: &mut [SecBuffer<'_>]) {
@@ -421,7 +429,7 @@ fn encrypt(key: &[u8], key_usage: i32, send_seq: u64, message: &mut [SecBuffer<'
 Then, we encrypt the data. Let's do it in two steps:
 
 1. Collect the data to encrypt in one buffer: DATA sec buffer + filler + wrap token header.
-2. Encrypt it with the a correct key usage number. There are not many Kerberos algorithms implementations. The only actively used and well maintained one is `picky-krb`: [docs.rs/picky-krb/crypto/aes/](https://docs.rs/picky-krb/latest/picky_krb/crypto/aes/index.html).
+2. Encrypt it with the correct key usage number. There are not many Kerberos encryption algorithm implementations. The only actively used and well-maintained one is `picky-krb`: [docs.rs/picky-krb/crypto/aes/](https://docs.rs/picky-krb/latest/picky_krb/crypto/aes/index.html).
 
 ```rust
 fn encrypt(key: &[u8], key_usage: i32, send_seq: u64, message: &mut [SecBuffer<'_>]) {
@@ -452,7 +460,7 @@ fn encrypt(key: &[u8], key_usage: i32, send_seq: u64, message: &mut [SecBuffer<'
 }
 ```
 
-I hope you didn't forget about confounder. In the code above, it is autogenerated and returned from the `encrypt_no_checksum` function. We need it to correctly calculate HMAC. What is next? Right, checksum calculation.
+I hope you didn't forget about the confounder. In the code above, it is autogenerated and returned from the `encrypt_no_checksum` function. We need it to correctly calculate HMAC. What is next? Right, checksum calculation.
 
 ```rust
 fn encrypt(key: &[u8], key_usage: i32, send_seq: u64, message: &mut [SecBuffer<'_>]) {
@@ -517,11 +525,11 @@ That's all! We just implemented RPC Kerberos encryption! :sunglasses: :partying_
 
 _**Note**. The full code is available here: RPC decryptor [github/TheBestTvarynka/trash-code/rpc-decryptor](https://github.com/TheBestTvarynka/trash-code/tree/feat/rpc-kerberos-encryption/rpc-decryptor)._
 
-I didn't explain the decryption process in detail, but it is completely the reverse of encryption. Look at the scheme below (you may need to zoom or open it in a new tab):
+I didn't explain the decryption process in detail, but it is completely the reverse of encryption. Look at the scheme below (you may need to zoom in or open it in a new tab):
 
 ![](./rpc-decryption-full-diagram.png)
 
-As you can see, the decryption process is reversed encryption process (obviously, makes sense). Time to start implementing it. We start from the Wrap Token construction and splitting it into header and encrypted part.
+As you can see, the decryption process is a reversed encryption process (obviously, makes sense). Time to start implementing it. We start with the Wrap Token construction and split it into the header and encrypted parts.
 
 ```rust
 fn decrypt(key: &[u8], key_usage: i32, message: &mut [SecBuffer<'_>]) {
@@ -751,7 +759,7 @@ All these buffers were extracted from the RPC Request PDU, which you already saw
 
 > _Wait! Wait! Wait! Where the hell did you get the correct (I suppose correct) session key?_ :raised_eyebrow:
 
-:sweat_smile: I know the user's password, so I can decrypt the previous Kerberos messages and extract the session key :hand_over_mouth: :shushing_face:. Maybe I'll write an article about it some day. Ping me if you need to know how to do it :upside_down_face:.
+:sweat_smile: I know the user's password, so I can decrypt the previous Kerberos messages and extract the session key :hand_over_mouth: :shushing_face:. Maybe I'll write an article about it someday. Ping me if you need to know how to do it :upside_down_face:.
 
 Enough talking. Let's run this test. We've been waiting for this for so long.
 
