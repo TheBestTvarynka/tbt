@@ -16,7 +16,7 @@ thumbnail = "thumbnail.png"
 
 Today's world has many unknown and magical things. Proprietary protocols and libraries are among them :zany_face:. In this blog post, I will explain how RPC encryption works under the hood and how to implement it over the SSPI interface.
 
-## Gals
+## Goals
 
 * Provide a detailed explanation of how RPC PDUs are encrypted.
 * Explain how it is related to SSPI.
