@@ -765,9 +765,17 @@ Enough talking. Let's run this test. We've been waiting for this for so long.
 
 ![](./decrypt_rpc_request_test.png)
 
-Yeeeeeey. We have successfully decrypted the RPC request! It proves that the implementation is correct!
+Yeeeeeey. We have successfully decrypted the RPC request! It proves that the implementation is correct! The plaintext buffer on the screenshot is decrypted `GetKey` RPC request.
 
 Hope you find this article informative and useful. Cheers! :wink:
+
+# Unaddressed topics
+
+If you want to get any of the following topics explained, feel free to contact me.
+
+* NTLM RPC encryption. But if you are really interested, you can read how it is implemented in `sspi-rs`: [github.com/Devolutions/sspi-rs/193f92a0fd73e43d672e3f9ac5775c894c02b200/src/ntlm/mod.rs#L419-L455](https://github.com/Devolutions/sspi-rs/blob/193f92a0fd73e43d672e3f9ac5775c894c02b200/src/ntlm/mod.rs#L419-L455).
+* Kerberos auth process. [Three-Leg DCE-Style Mutual Authentication](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-kile/190ab8de-dc42-49cf-bf1b-ea5705b7a087).
+* How I decrypted Kerberos traffic and extracted the session key.
 
 # Doc, references, code
 
