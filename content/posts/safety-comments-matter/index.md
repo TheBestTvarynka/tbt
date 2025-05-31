@@ -22,7 +22,7 @@ TL;DR: This article is highly inspired by [this GitHub comment](https://github.c
 #![warn(clippy::undocumented_unsafe_blocks)]
 ```
 
-You can find such comments in many crates and std. [Example](https://doc.rust-lang.org/src/core/ptr/non_null.rs.html#388):
+You can find such comments in many crates and std. [Example](https://github.com/rust-lang/rust/blob/7a7bcbbcdbf2845164a94377d0e0efebb737ffd3/library/core/src/ptr/non_null.rs#L391-L394):
 
 ```Rust
 // SAFETY: `NonNull` is `transparent` over a `*const T`, and `*const T`
@@ -30,6 +30,71 @@ You can find such comments in many crates and std. [Example](https://doc.rust-la
 // our `NonNull` to a `*mut T` directly.
 unsafe { mem::transmute::<Self, *mut T>(self) }
 ```
+
+Such comments help us to understand safety preconditions and invariants of the unsafe operation, how they are upheld. Devs usually tend to treat them as one another boring thing in development process. I kinda feel the same, but benefits of properly written `unsafe` blocks are almost immeasurable.
+
+But what is _"a properly written `unsafe` block"_? A properly written `unsafe` block has the following characteristics:
+
+* Has a single unsafe operation.
+* Documented using `SAFETY:` comment. In turn, to write a proper `SAFETY:` comment, you must follow the following requirements ([src](https://github.com/Devolutions/sspi-rs/pull/430#pullrequestreview-2850078587) of the quote below):
+
+> * Explain why the code is "sound", detailing the invariants and preconditions that are maintained.
+> * Avoid assumptions without justifications. 
+>   * Do not use phrases like _"we assume this is safe because…"_ or _"this should be safe"_.
+>   * Provide concrete evidence or reasoning that justifies the safety of the operation.
+> * Explicitly reference type invariants and prior checks when safety relies on it.
+>   ```rust
+>   // SAFETY: index is guaranteed to be within bounds due to the prior check.
+>   unsafe { array.get_unchecked(index) };
+>   ```
+> * Address each safety requirement individually, using a bullet list.
+>   ```rust
+>   // SAFETY:
+>   // - ptr is non-null and properly aligned.
+>   // - The memory region ptr points to is valid for reads of len elements.
+>   unsafe { std::slice::from_raw_parts(ptr, len) };
+>   ```
+> * Document FFI boundaries clearly, but if the only safety requirements are standard (e.g.: non-dangling pointers), for consistency, use the following concise comment verbatim:
+>   ```rust
+>   // SAFETY: FFI call with no outstanding preconditions.
+>   unsafe { straightforward_ffi_function(ptr) };
+>   ```
+> * Do not document how the resulting value is safely used later.
+>   * Really focus only on why the current unsafe operation is sound.
+>   * Subsequent operations should be documented as appropriate in the code.
+> * It’s welcomed to document how and why the function is used, but this should not be part of the `SAFETY:` comment. 
+>     * Write a separate paragraph out of the safety comment, typically above the safety comment.
+>       ```rust
+>       // Passing None to GetModuleHandleW requests the handle to the
+>       // current process main executable module
+>       //
+>       // SAFETY: FFI call with no outstanding preconditions.
+>       let h_module: HMODULE = unsafe { GetModuleHandleW(None)? };
+>       ```
+> * To keep the comment concise, do not use phrases like _"this is safe because…"_. Go straight to the point (e.g.: _"pointer is guaranteed not null due to the prior check"_).
+> * For readability and clarity, keep the `unsafe` block as small as possible, and untangled from other safe code.  If needed, use intermediate variables.
+> ```rust
+> // SAFETY: …
+> let intermediate_variable = unsafe { transform_credentials_handle(credentials_handle) };
+> match intermediate_variable { … }
+> ```
+> * If a precondition must be upheld by the caller, mark the function as unsafe and document it with a `# Safety` section listing the invariants.
+> ```rust
+> /// Returns the length in characters of the C-string.
+> ///
+> /// # Safety
+> ///
+> /// - `s` must be a valid, null-terminated C-string.
+> unsafe fn strlen(s: *const u8) -> usize { … }
+> ```
+
+:face_exhaling:. I hope you didn't get tired at this point. It is true that writing a good `SAFETY:` comment can be hard and exhausting. But it is worth it.
+
+For me, the most important point in `SAFETY:` comments is that writing them requires thinking about preconditions and invariants. Devs seldom think about invariants and what can go wrong. When explaining why the `unsafe` operation is safe, you check the corresponding unsafe function preconditions and how to uphold them.
+
+**Do not neglect `SAFETY:` comments.**
+
+### Example
 
 
 
@@ -117,7 +182,7 @@ Now you understand why the 2024 edition is preferred in unsafe code :smiley:.
 
 ### `unsafe` blocks without `SAFETY` comments
 
-The whole first part of the article is about it. You should already understand the importance of such comments in the code.
+The whole [first part](#safety-comments-matter) of the article is about it. You should already understand the importance of such comments in the code.
 
 ### Many unsafe operations per one unsafe block
 
