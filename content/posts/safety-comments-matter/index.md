@@ -4,12 +4,12 @@ date = 2025-06-01
 draft = false
 
 [taxonomies]
-tags = ["rust"]
+tags = ["rust", "unsafe"]
 
 [extra]
-keywords = "Rust"
+keywords = "Rust, Unsafe, Safety"
 toc = true
-# thumbnail = "thumbnail.png"
+thumbnail = "thumbnail.png"
 +++
 
 TL;DR: This article is highly inspired by [this GitHub comment](https://github.com/Devolutions/sspi-rs/pull/430#pullrequestreview-2850078587).
@@ -31,7 +31,7 @@ You can find such comments in many crates and std. [Example](https://github.com/
 unsafe { mem::transmute::<Self, *mut T>(self) }
 ```
 
-Such comments help us to understand safety preconditions and invariants of the unsafe operation, how they are upheld. Devs usually tend to treat them as one another boring thing in development process. I kinda feel the same, but benefits of properly written `unsafe` blocks are almost immeasurable.
+Such comments help us to understand safety preconditions and invariants of the unsafe operation, and how they are upheld. Devs usually tend to treat them as one another boring thing in the development process. I kinda feel the same, but the benefits of properly written `unsafe` blocks are almost immeasurable.
 
 But what is _"a properly written `unsafe` block"_? A properly written `unsafe` block has the following characteristics:
 
@@ -92,7 +92,7 @@ But what is _"a properly written `unsafe` block"_? A properly written `unsafe` b
 
 For me, the most important point in `SAFETY:` comments is that writing them requires thinking about preconditions and invariants. Devs seldom think about invariants and what can go wrong. When explaining why the `unsafe` operation is safe, you check the corresponding unsafe function preconditions and how to uphold them.
 
-You can use AI to help you write `SAFERY:` comments, but remember that **it is your responsibility** to check that the generated ones list all needed preconditions and invariants.
+You can use AI to help you write `SAFETY:` comments, but remember that **it is your responsibility** to check that the generated ones list all needed preconditions and invariants.
 
 **Do not neglect `SAFETY:` comments.**
 
@@ -130,7 +130,7 @@ The function above is pretty simple. It does some job and saves the resulting bu
 ///
 /// # SAFETY:
 ///
-/// - The `context` pointer must be valid non-null pointer to the application context and obtained using the [init_context] function.
+/// - The `context` pointer must be a valid non-null pointer to the application context and obtained using the [init_context] function.
 /// - The `len` and `attrs` pointers must be non-null.
 /// - The `buf` pointer must be non-null. The entire memory range behind it must be contained within a single allocated object,
 ///   be properly initialized and aligned.
@@ -178,9 +178,9 @@ Now the caller knows that it is not enough to just allocate the memory. The memo
 
 ## Put A Finger Down
 
-Let's play [Put A Finger Down](https://officialgamerules.org/game-rules/put-a-finger-down/) game. _(This section is optional and written mostly for fun)_. The rule is simple: you put one finger down for every true statement about your unsafe Rust code.
+Let's play the [Put A Finger Down](https://officialgamerules.org/game-rules/put-a-finger-down/) game. _(This section is optional and written mostly for fun)_. The rule is simple: you put one finger down for every true statement about your unsafe Rust code.
 
-If you put down zero fingers, my congratulations 🎊. You are probably aware of what you are doing, and you can sleep peacefully. If you put down all fingers, then, please, reconsider your life choices 🙂
+If you put down zero fingers, my congratulations 🎊. You are probably aware of what you are doing, and you can sleep peacefully. If you put down all your fingers, then, please, reconsider your life choices 🙂
 
 :ballot_box_with_check: Rust 2018 edition or older.
 
@@ -264,7 +264,7 @@ The whole [first part](#safety-comments-matter) of the article is about it. You 
 
 ### Many unsafe operations per one unsafe block
 
-It is partially coveted by 2024 edition, but still can violated:
+It is partially covered by the 2024 edition, but still can violated:
 
 ```rust
 // Compiles without any warnings.
@@ -278,9 +278,7 @@ unsafe fn tbt(buf: *mut *mut u8, len: *mut u32) {
 
 It is not recommended (by me and some other dudes :wink:) to have multiple unsafe operations in one `unsafe` block.
 Because it becomes much harder to keep the code safe and follow all safety preconditions.
-Every unsafe operation should have its own `unsafe` block and `SAFETY` comment above it.
-
-TODO: example?
+Every unsafe operation should have its own `unsafe` block and `SAFETY` comment above it (you can see an example in [the first part](#example) of the article).
 
 ### Miri
 
@@ -304,7 +302,7 @@ I'm still convinced that the Rust documentation is the best place to learn about
 >
 > Rust provides two ways of dealing with this situation: _Strict Provenance_ and _Exposed Provenance_.
 
-There is a lot more to say. But I think you can read the Rust doc by yourself. My point is that you should never cast a pointer to an integer and vice versa. Ot if you even dare to do it, then at least use an appropriate API: [`expose_provenance`](https://doc.rust-lang.org/std/primitive.pointer.html#method.expose_provenance) and [`with_exposed_provenance`](https://doc.rust-lang.org/std/ptr/fn.with_exposed_provenance.html).
+There is a lot more to say. But I think you can read the Rust doc by yourself. My point is that you should never cast a pointer to an integer and vice versa. Or if you even dare to do it, then at least use an appropriate API: [`expose_provenance`](https://doc.rust-lang.org/std/primitive.pointer.html#method.expose_provenance) and [`with_exposed_provenance`](https://doc.rust-lang.org/std/ptr/fn.with_exposed_provenance.html).
 
 ## Conclusion
 
