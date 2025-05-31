@@ -92,15 +92,93 @@ But what is _"a properly written `unsafe` block"_? A properly written `unsafe` b
 
 For me, the most important point in `SAFETY:` comments is that writing them requires thinking about preconditions and invariants. Devs seldom think about invariants and what can go wrong. When explaining why the `unsafe` operation is safe, you check the corresponding unsafe function preconditions and how to uphold them.
 
+You can use AI to help you write `SAFERY:` comments, but remember that **it is your responsibility** to check that the generated ones list all needed preconditions and invariants.
+
 **Do not neglect `SAFETY:` comments.**
 
 ### Example
 
+[As Linus Torvalds said](https://lkml.org/lkml/2000/8/25/132),
 
+> Talk is cheap. Show me the code.
+
+So, let's show some code. Suppose we have the following `unsafe` code:
+
+```rust
+unsafe fn do_some_job(context: PCtxtHandle, buf: *mut u8, len: *mut u32, attrs: *mut u32) -> u32 {
+    if buf.is_null() || len.is_null() || attrs.is_null() {
+        return 1;
+    }
+
+    let out_data = /* do the job */;
+    let out_attrs = /* Attributes::... */;
+
+    unsafe {
+        from_raw_parts_mut(buf, out_data.len()).copy_from_slice(&out_data);
+        *len = out_data.len().try_into().unwrap();
+        *attrs = out_attrs.bits();
+    }
+
+    0
+}
+```
+
+The function above is pretty simple. It does some job and saves the resulting buffers and attributes into the out parameters. Now let's make it better. I know we can.
+
+```rust
+/// Does some job.
+///
+/// # SAFETY:
+///
+/// - The `context` pointer must be valid non-null pointer to the application context and obtained using the [init_context] function.
+/// - The `len` and `attrs` pointers must be non-null.
+/// - The `buf` pointer must be non-null. The entire memory range behind it must be contained within a single allocated object,
+///   be properly initialized and aligned.
+unsafe fn do_some_job(context: PCtxtHandle, buf: *mut u8, len: *mut u32, attrs: *mut u32) -> u32 {
+    if buf.is_null() || len.is_null() || attrs.is_null() {
+        return 1;
+    }
+
+    let out_data = /* do the job */;
+    let out_attrs = /* Attributes::... */;
+
+    // SAFETY:
+    // - The `buf` pointer is not null due to the prior check.
+    // - We create only one slice at a time, so slice do not alias any other references.
+    // - The caller must ensure that the memory is properly initialized and aligned.
+    let buf = unsafe { from_raw_parts_mut(buf, out_data.len()) };
+    buf.copy_from_slice(&out_data);
+
+    let out_len = out_data.len().try_into().unwrap();
+    // SAFETY:
+    // The `len` pointer is not null due to the prior check.
+    unsafe {
+        *len = out_len;
+    }
+
+    let out_attrs = out_attrs.bits();
+    // SAFETY:
+    // The `attrs` pointer is not null due to the prior check.
+    unsafe {
+        *attrs = out_attrs;
+    }
+
+    0
+}
+```
+
+Much better, right? Let's recall what has changed:
+
+* Added function doc comment with `# Safety` requirements.
+* Split unsafe operations into many `unsafe` blocks containing exactly one unsafe operation.
+* Every `unsafe` block now has the `SAFETY:` comment.
+* Moved safe operation out of the unsafe block (I'm talking about the `.copy_from_slice` method call).
+
+Now the caller knows that it is not enough to just allocate the memory. The memory needs to be initialized. Now the caller knows that `len` and `attrs` pointers cannot be NULL. And more... It sounds obvious, but the unsafe code becomes very dangerous in the blink of an eye.
 
 ## Put A Finger Down
 
-Let's play [Put A Finger Down](https://officialgamerules.org/game-rules/put-a-finger-down/) game. The rule is simple: you put one finger down for every true statement about your unsafe Rust code.
+Let's play [Put A Finger Down](https://officialgamerules.org/game-rules/put-a-finger-down/) game. _(This section is optional and written mostly for fun)_. The rule is simple: you put one finger down for every true statement about your unsafe Rust code.
 
 If you put down zero fingers, my congratulations 🎊. You are probably aware of what you are doing, and you can sleep peacefully. If you put down all fingers, then, please, reconsider your life choices 🙂
 
