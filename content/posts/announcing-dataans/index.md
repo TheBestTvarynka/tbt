@@ -4,7 +4,7 @@ date = 2024-10-19
 draft = false
 
 [taxonomies]
-tags = ["rust", "tool", "project", "tauri", "leptos"]
+tags = ["rust", "tool", "project", "tauri", "leptos", "dataans"]
 
 [extra]
 keywords = "Rust, Tauri, Leptos, Note-taking, Markdown"
