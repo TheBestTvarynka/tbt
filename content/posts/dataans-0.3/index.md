@@ -9,6 +9,7 @@ tags = ["rust", "tool", "project", "tauri", "leptos", "dataans"]
 [extra]
 keywords = "Rust, Tauri, Leptos, Note-taking, Markdown, Sync, Local-first"
 toc = true
+mermaid = true
 # thumbnail = "dataans-thumbnail.png"
 +++
 
@@ -74,10 +75,106 @@ So, the user can freely use the app without any limitations during synchronizati
 
 ![](./successful-sync.png)
 
-
 # How it works
 
+Now let's talk about interesting things: how it works :blush:. Below are detailed technical explanations.
+You can jump right to the interesting part. There is no need to read it in order.
+
 ## Auth
+
+Initially, I implemented the authentication manually.
+It was a simple password-based authentication with a primitive session-based authorization implementation.
+
+However, I then decided [to throw it out](https://github.com/TheBestTvarynka/Dataans/pull/97/commits).
+I pondered on it and decided that I do not want to maintain a ton of code dedicated to auth.
+I wanted to delegate it to some external service. I explored the most popular solutions and chose [Cloudflare Zero Trust Access](https://www.cloudflare.com/zero-trust/products/access/).
+
+It works very simple (as I wanted). Cloudflare works as a proxy and intercepts requests to my web service.
+If the request does not have an authentication token inside, then Cloudflare does the auth.
+I configured the allowed emails list, and Cloudflare sends a code to the entered email during sign-in.
+Cloudflare injects a token into the request after successful sign-in and sends the request to my web server.
+
+{% mermaiddiagram() %}
+sequenceDiagram
+    participant Client as Client
+    participant Cloudflare as Cloudflare
+    participant Server as Web-Service
+
+    Client->>Cloudflare: HTTP Request
+    Cloudflare->>Client: Redirect to Zero Trust login page
+    Client->>Cloudflare: Sign in
+    Cloudflare->>Client: Redirect back with session cookie (CF_Authorization cookie)
+
+    Client->>Cloudflare: HTTP Request (with CF_Authorization cookie)
+    Cloudflare->>Server: Proxies request with cf-access-jwt-assertion header
+    Server-->>Cloudflare: Response
+    Cloudflare-->>Client: Web server response
+{% end %}
+
+The only thing I need to do on my web server's side is to validate Cloudflare's JWT token.
+The validation algorithm is pretty straightforward:
+
+1. Extract the `cf-access-jwt-assertion` header.
+2. Get Cloudflare's signing keys.
+3. Validate JWT using any common library.
+
+You can read the full code here: [github/TheBestTvarynka/Dataans/6c898a01/crates/web-server/src/routes/mod.rs](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/crates/web-server/src/routes/mod.rs). There is an important moment:
+
+> By default, **Access rotates the signing key every 6 weeks**. This means you will need to programmatically or manually update your keys as they rotate. ([src](https://developers.cloudflare.com/cloudflare-one/identity/authorization-cookie/validating-json/#access-signing-keys))
+
+Therefore, if you decide to hardcode signing keys, ensure that you rotate them regularly.
+I decided to follow another path: the web server requests the signing keys every time it needs to verify the JWT token.
+Yes, it is not the best option, but it is enough for me ([Worse Is Better](https://www.dreamsongs.com/RiseOfWorseIsBetter.html)).
+
+Great. Simple, secure, easy to set up :rocket:. I asked ChatGPT for the step-by-step guide, which worked from the first try.
+I tried to access the protected route from the browser, and it worked perfectly.
+
+However, there is a small, tiny problem: I am not writing a website, I am writing a desktop app using Tauri.
+I cannot rely on cookies themselves because I want to make requests from the app backend using the [`request`](https://docs.rs/reqwest/latest/reqwest/) HTTP client.
+
+Therefore, I need to extract the `CF_Authorization` token somehow and save it somewhere in the app backend.
+Additionally, Additionally, the app needs to ask the user password and passphrase. I was thinking for some time about the easiest way to implement.
+I came up with the idea of sending the cookie token, password, and passphrase in one Tauri command to the app backend.
+
+When the user passes the Cloudflare, the web server responds with the [`authorize.html`](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/crates/web-server/authorize.html) page.
+It is a simple form with an embedded script. When the user submits the form, the script extracts the `CF_Authorization` token, reads the typed password and passphrase, and sends all this data to the app backend:
+
+```js
+async function extractAndSendToken() {
+  const cookie = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('CF_Authorization='));
+  
+  if (!cookie) {
+    console.error("CF_Authorization cookie not found.");
+    return;
+  }
+
+  const token = cookie.split('=')[1];
+
+  const password = document.getElementById("password").value;
+  const salt = document.getElementById("salt").value;
+
+  let args = { token, url: window.location.origin };
+  if (password && password.length > 0) {
+    args.password = password;
+  }
+  if (salt && salt.length > 0) {
+    args.salt = salt;
+  }
+
+  try {
+    await window.__TAURI__.core.invoke("plugin:dataans|sign_in", args);
+    console.log("Token sent successfully:", token);
+  } catch (e) {
+    console.error("Failed to send token:", e);
+  }
+}
+```
+
+Fortunately, Tauri injects the `window.__TAURI__` object into every spawned webview. Thus, even when the webview is created from [an external URL](https://docs.rs/tauri/latest/tauri/enum.WebviewUrl.html#variant.External) (not [the direct app frontend](https://docs.rs/tauri/latest/tauri/enum.WebviewUrl.html#variant.App)), it can still send Tauri commands.
+
+That's all. The rest is easy to implement. When the app backend receives the data, it generates an encryption key (from the password and passphrase), tests the auth token, and saves it... There is a corresponding piece of [code](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/dataans/src-tauri/src/dataans/command/auth.rs#L35), if you want to see it.
 
 ## Data encryption
 
@@ -89,3 +186,6 @@ So, the user can freely use the app without any limitations during synchronizati
 
 # References & final note
 
+1. [GitHub/TheBestTvarynka/Dataans/releases/v.0.3.0](https://github.com/TheBestTvarynka/Dataans/releases/tag/v.0.3.0).
+2. [Cloudflare Zero Trust Access](https://www.cloudflare.com/zero-trust/products/access/).
+3. [Neon](https://github.com/neondatabase/neon).
