@@ -225,9 +225,140 @@ if checksum != calculated_checksum {
 Ok(plaintext)
 ```
 
-That is all for the encryption part. The overall encryption process is simple, secure, and, most importantly, boring. I like the fact that it took a bit more than 100 lines of code to implement all the needed cryptography functions in Rust: [github/TheBestTvarynka/Dataans/6c898a01/dataans/src-tauri/src/dataans/crypto.rs](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/dataans/src-tauri/src/dataans/crypto.rs).
+That is all for the encryption part. The overall encryption process is simple, secure, and, most importantly, boring.
+I like the fact that it took a bit more than 100 lines of code to implement all the needed cryptography functions in Rust: [github/TheBestTvarynka/Dataans/6c898a01/dataans/src-tauri/src/dataans/crypto.rs](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/dataans/src-tauri/src/dataans/crypto.rs).
 
 ## Synchronization
+
+(If you do not want to read the whole section, then you can read the code: [github/TheBestTvarynka/Dataans/6c898a01/dataans/src-tauri/src/dataans/sync/mod.rs](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/dataans/src-tauri/src/dataans/sync/mod.rs).
+It is well-documented)
+
+I spent around half of the year trying different approaches in synchronization. It was hard to choose a suitable sync algorithm.
+I had never implemented such features and had been overthinking it for months. First, I read [the rsync algorithm](https://rsync.samba.org/tech_report/tech_report.html) documentation and tried to apply it.
+Then, I tried to store the hash of every object in the database and compare these hashes to determine the state diff.
+At some point, I went even further and tried to apply [Merkle trees](https://en.wikipedia.org/wiki/Merkle_tree) :zany_face:.
+
+Everything looked overcomplicated. But I did not give up and decided to make things even more complicated: [CRDT](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type)s. I was disappointed again because it wasn't what I needed.
+
+At some point, I paid attention to the [Operation-Based CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#Operation-based_CRDTs).
+Synchronizing the operations log instead of the full app state looks simple.
+I elaborated this idea further and finally decided to use it for the synchronization.
+
+Every time a user does any action that alters the local state, the app logs this action. It is called _a user operation_, or _an operation_.
+When the user starts the sync, **_the app and the sync server synchronize the operation lists_**. Now the task is a bit simpler: there are two lists and the app needs to synchronize their content.
+
+The naive solution is to take local (app state) and remote (sync server state) operation lists and compare them operation by operation.
+But it can be slow, operations number can be large, and I still want to overengineer things. Thus, I introduced blocks and block hashes.
+
+A _block_ is a collection of `N` sequential operations sorted by timestamp.
+
+```rust
+// `operation` are sorted by timestamp.
+let block_1 = operations[0..N];
+let block_2 = operations[N..N * 2];
+// ...
+let block_n = operations[N * (n - 1)..N * n];
+```
+
+I am sure you got the idea. All operations are divided into chunks by `N`, which I call blocks. Nothing more, nothing less.
+
+A _block hash_ is a hash of sequential hashes of block operations.
+
+```rust
+let block_hash = hash(hash(block[0]), hash(block[1]), ..., hash(block[N - 1]));
+```
+
+This is the core of my small simple optimization. During the first synchronization step, app requests server's block hashes.
+And calculates the same block hashes on local operations. Blocks with the same hashes contain the same operations.
+Thus, the app can safely discard such blocks.
+
+Conflicts? The last write wins. Every object in the local database has `updated_at` timestamp.
+When the app detects conflict during synchronization, it compares two timestamps and last (latest) write wins.
+
+Let's summarize the synchronization algorithm. I prepared a scheme for you to make it easier to understand:
+
+{% mermaiddiagram() %}
+sequenceDiagram
+    participant App as Dataans
+    participant Server as Sync Server
+
+    Note over App,Server: Step 1: Request server's blocks and calculate local ones
+    App->>Server: GET /data/blocks
+    Server-->>App: [hash_1, hash_2, ...]
+
+    Note over App: Step 2: Compare block hashes
+    App->>App: Find distinct blocks by comparing hashes
+
+    Note over App,Server: Step 3: Request server's operations from distinct blocks
+    App->>Server: GET /data/operation?operations_to_skip=<>
+    Server-->>App: [operation_1, operation_2, ...]
+
+    Note over App: Step 4: Determine operations differences
+    App->>App: Form operations_to_upload and operations_to_apply sets
+
+    Note over App,Server: Step 5: Sync operations
+    App->>Server: POST /data/operation (operations_to_upload)
+    App->>App: Apply operations_to_apply to local state
+{% end %}
+
+**Step 1.** The app requests server's block hashes and calculates local block hashes concurrently.
+The app will have two lists of hashes as the result.
+
+**Step 2.** The app compares block hashes from two lists one by one.
+It stops on the first pair of unequal hashes (or until one of the lists ends) and discards all hashes before this pair. The app will have two lists of block hashes that have different hashes.
+It does not need to compare hashes after the first unequal pair.
+All operations are sorted by timestamp before calculating block hashes. So, all next consecutive blocks will also have different hashes.
+
+**Step 3.** At this point, the app knows how many blocks are equal on the local and remote sides.
+So, the app requests all operations _after_ equal blocks and queries local operations (also _after_ equal blocks).
+
+**Step 4.** The app compares local and remote operation lists (both of which are sorted by timestamp).
+The best thing is that the app does not need to do a Cartesian product over these two lists.
+The app compared operations one by one until the pair of operations with different ids (or until one of the lists ends).
+
+We can be sure that all operations after that point also have different ids.
+Because it is impossible otherwise. If the app is aware of some operation, then it is also aware of all operations before.
+The app cannot synchronize only later operations and skip earlier ones. The same is true for the server's side.
+
+```rust
+// Step 4: Find the difference between local and remote operations.
+let mut operations_to_upload = Vec::new();
+let mut operations_to_apply = Vec::new();
+
+loop {
+    match (local_operations.next(), remote_operations.next()) {
+        (Some(local_operation), Some(remote_operation)) => {
+            if local_operation.id != remote_operation.id {
+                operations_to_upload.push(local_operation);
+                operations_to_apply.push(remote_operation);
+
+                for local_operation in local_operations {
+                    operations_to_upload.push(local_operation);
+                }
+
+                for remote_operation in remote_operations {
+                    operations_to_apply.push(remote_operation);
+                }
+
+                break;
+            }
+        }
+        (Some(local_operation), None) => {
+            operations_to_upload.push(local_operation);
+        }
+        (None, Some(remote_operation)) => {
+            operations_to_apply.push(remote_operation);
+        }
+        (None, None) => break,
+    }
+}
+```
+
+The app will have `operations_to_upload` and `operations_to_apply` lists as the result.
+
+**Step 5.** The last step is simple. The app uploads the `operations_to_upload` operations to the sync server and applies `operations_to_apply` operations on the local database.
+
+If everything succeeds, we can be sure that local and remote states are the same.
 
 ## Files sync
 
