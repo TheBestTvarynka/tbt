@@ -84,6 +84,45 @@ So, the user can freely use the app without any limitations during synchronizati
 Now let's talk about interesting things: how it works :blush:. Below are detailed technical explanations.
 You can jump right to the interesting part. There is no need to read it in order.
 
+## Infrastructure
+
+This section is boring, because I don't like to describe infrastructure in detail. So, if you are not interested in such things, then skip it :wink:.
+
+{% mermaiddiagram() %}
+graph TD
+    subgraph Internet
+        Client[Dataans App]
+    end
+
+    subgraph Cloudflare
+        Client -->|HTTPS Request| CloudflareZeroTrust[Cloudflare Zero Trust Access]
+        CloudflareZeroTrust -->|cf-access-jwt-assertion Injected| FlyApp[Sync Server]
+
+        subgraph Fly.io
+            FlyApp -->|User files| ObjectStorage[(Tigris Object Storage)]
+        end
+
+        FlyApp -->|Verifies JWT| CF_PubKey[Cloudflare Public Key Endpoint]
+    end
+
+    subgraph Neon.com
+        FlyApp -->|User data| Postgres[(PostgreSQL Database)]
+    end
+{% end %}
+
+The overall infrastructure is straightforward.
+
+I use [Cloudflare](https://www.cloudflare.com/) for endpoints protection, auth, DDoS protection, and domain hosting.
+
+I use [Fly.io](https://fly.io/) as a main cloud provider. I like the microVM approach that they use. It is my first app deployed on fly.io.
+The deployment process was simple and fast. It reminded me of the old, almost forgotten feeling _"it just works"_.
+
+I use [Neon.com](https://neon.com/) PostgreSQL provider to store user's data. I did not like the fly.io's Postgres integration because it does not shut down automatically when it is not in use.
+So, I decided to try Neon. They have a very limited free tier, but it is ok for me (at least for now).
+I am very satisfied with the database start time. I think it is a great choice for small personal projects.
+
+I use [Tigris](https://www.tigrisdata.com/) object storage to store user's files. Mainly because it is integrated into the fly.io, so I decided to use it. Its free tier is more than enough for me.
+
 ## Auth
 
 Initially, I implemented the authentication manually.
@@ -413,6 +452,7 @@ If you are interested in contributing to or using the Dataans, feel free to ask 
 2. [GitHub/TheBestTvarynka/Dataans](https://github.com/TheBestTvarynka/Dataans).
 3. [Cloudflare Zero Trust Access](https://www.cloudflare.com/zero-trust/products/access/).
 4. [Neon](https://github.com/neondatabase/neon).
-5. [fly.io](https://fly.io/).
-6. [Operation-based_CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#Operation-based_CRDTs).
-7. [github/TheBestTvarynka/Dataans/6c898a01/doc/sync_server.md](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/doc/sync_server.md).
+5. [Fly.io](https://fly.io/).
+6. [Tigris](https://www.tigrisdata.com/).
+7. [Operation-based_CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#Operation-based_CRDTs).
+8. [github/TheBestTvarynka/Dataans/6c898a01/doc/sync_server.md](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/doc/sync_server.md).
