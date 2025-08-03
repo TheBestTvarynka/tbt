@@ -1,6 +1,6 @@
 +++
 title = "Announcing Dataans v.0.3.0"
-date = 2025-07-31
+date = 2025-08-03
 draft = false
 
 [taxonomies]
