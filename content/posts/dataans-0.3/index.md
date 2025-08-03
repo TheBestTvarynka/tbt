@@ -23,6 +23,8 @@ After some considerations and small research, I understood that I wanted the mul
 
 Decentralized Internet, P2P networks, etc, are good. But the current implementation of the data synchronization feature relies on the central sync (backup) server. The data synchronization using the P2P communication may be implemented in the future. It depends on my needs.
 
+This post turned out to be quite large. Alternatively, you can read the shorter version: [github/TheBestTvarynka/Dataans/6c898a01/doc/sync_server.md](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/doc/sync_server.md).
+
 # Demo
 
 Before explaining how it works and how I implemented it, I want to show you the demo.
@@ -133,7 +135,7 @@ However, there is a small, tiny problem: I am not writing a website, I am writin
 I cannot rely on cookies themselves because I want to make requests from the app backend using the [`request`](https://docs.rs/reqwest/latest/reqwest/) HTTP client.
 
 Therefore, I need to extract the `CF_Authorization` token somehow and save it somewhere in the app backend.
-Additionally, Additionally, the app needs to ask the user password and passphrase. I was thinking for some time about the easiest way to implement.
+Additionally, the app needs to ask the user password and passphrase. I was thinking for some time about the easiest way to implement.
 I came up with the idea of sending the cookie token, password, and passphrase in one Tauri command to the app backend.
 
 When the user passes the Cloudflare, the web server responds with the [`authorize.html`](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/crates/web-server/authorize.html) page.
@@ -177,6 +179,53 @@ Fortunately, Tauri injects the `window.__TAURI__` object into every spawned webv
 That's all. The rest is easy to implement. When the app backend receives the data, it generates an encryption key (from the password and passphrase), tests the auth token, and saves it... There is a corresponding piece of [code](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/dataans/src-tauri/src/dataans/command/auth.rs#L35), if you want to see it.
 
 ## Data encryption
+
+The the local state is unencrypted and saved in SQLite database. But the app encrypts the data before sending it to the sync server.
+Dataans follows one rule regarding user's data: **_we trust the user's computer and the user is responsible for keeping the local state safe, but we do not trust any remote servers and always encrypt data before sending it_**.
+
+We need to derive a key to encrypt the data. The app uses the [`PBKDF2`](https://en.wikipedia.org/wiki/PBKDF2) function and needs the user's password and passphrase to derive the key.
+
+```rust
+// Pseudocode
+let password = sha256(password);
+let salt = sha256(passphrase);
+
+let key = pbkdf2_hmac(password, salt, 1_200_000 /* iterations */);
+```
+
+The derived key is stored in plaintext in the `profile.json` file. There is no need to hide this key, because all data is local and unencrypted.
+
+As I wrote above, all data is encrypted before sending to the sync server.
+The app uses the [AES256](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard)-[GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode) algorithm and appends an [HMAC](https://en.wikipedia.org/wiki/HMAC)-[SHA256](https://en.wikipedia.org/wiki/SHA-2) checksum.
+
+```rust
+// Pseudocode
+let nonce = random();
+
+let cipher_text = aes_gcm.encrypt(key, nonce, plaintext);
+let checksum = hmac_sha256(key, nonce + plaintext);
+
+let result = nonce + plaintext + checksum;
+```
+
+`AES256-GCM` provides strong encryption, and `HMAC-SHA256` provides data integrity. The same for decryption, but in reverse:
+
+```rust
+// Pseudocode
+let (nonce, cipher) = result.split_at(NONCE_LEN);
+let (cipher_text, checksum) = cipher.split_at(cipher.len() - HMAC_LEN);
+
+let plaintext = aes_gcm.decrypt(key, nonce, cipher_text);
+let calculated_checksum = hmac_sha256(key, nonce + plaintext);
+
+if checksum != calculated_checksum {
+   return Err("data is altered");
+}
+
+Ok(plaintext)
+```
+
+That is all for the encryption part. The overall encryption process is simple, secure, and, most importantly, boring. I like the fact that it took a bit more than 100 lines of code to implement all the needed cryptography functions in Rust: [github/TheBestTvarynka/Dataans/6c898a01/dataans/src-tauri/src/dataans/crypto.rs](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/dataans/src-tauri/src/dataans/crypto.rs).
 
 ## Synchronization
 
