@@ -10,7 +10,7 @@ tags = ["rust", "tool", "project", "tauri", "leptos", "dataans"]
 keywords = "Rust, Tauri, Leptos, Note-taking, Markdown, Sync, Local-first"
 toc = true
 mermaid = true
-# thumbnail = "dataans-thumbnail.png"
+thumbnail = "dataans-v030-thumbnail.png"
 +++
 
 [GitHub/TheBestTvarynka/Dataans/releases/v.0.3.0](https://github.com/TheBestTvarynka/Dataans/releases/tag/v.0.3.0).
