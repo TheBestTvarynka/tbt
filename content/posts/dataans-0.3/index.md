@@ -13,6 +13,8 @@ mermaid = true
 # thumbnail = "dataans-thumbnail.png"
 +++
 
+[GitHub/TheBestTvarynka/Dataans/releases/v.0.3.0](https://github.com/TheBestTvarynka/Dataans/releases/tag/v.0.3.0).
+
 # Intro
 
 The Dataans app has followed a local first approach since the very beginning of its existence.
@@ -174,7 +176,7 @@ async function extractAndSendToken() {
 }
 ```
 
-Fortunately, Tauri injects the `window.__TAURI__` object into every spawned webview. Thus, even when the webview is created from [an external URL](https://docs.rs/tauri/latest/tauri/enum.WebviewUrl.html#variant.External) (not [the direct app frontend](https://docs.rs/tauri/latest/tauri/enum.WebviewUrl.html#variant.App)), it can still send Tauri commands.
+Fortunately, Tauri injects the `window.__TAURI__` object into every spawned webview. Thus, even when the webview is created from [an external URL](https://docs.rs/tauri/2.7.0/tauri/enum.WebviewUrl.html#variant.External) (not [the direct app frontend](https://docs.rs/tauri/2.7.0/tauri/enum.WebviewUrl.html#variant.App)), it can still send Tauri commands.
 
 That's all. The rest is easy to implement. When the app backend receives the data, it generates an encryption key (from the password and passphrase), tests the auth token, and saves it... There is a corresponding piece of [code](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/dataans/src-tauri/src/dataans/command/auth.rs#L35), if you want to see it.
 
@@ -358,14 +360,59 @@ The app will have `operations_to_upload` and `operations_to_apply` lists as the 
 
 **Step 5.** The last step is simple. The app uploads the `operations_to_upload` operations to the sync server and applies `operations_to_apply` operations on the local database.
 
-If everything succeeds, we can be sure that local and remote states are the same.
+If everything succeeds, we can be sure that local and remote states are the same :relaxed:.
 
 ## Files sync
 
+Aren't you forgetting something important? :upside_down_face:
+
+Let me remind you. The Dataans supports attaching files to notes. Only file metadata is saved in the local SQLite database.
+The file contents are saved locally in the file system as files. It means that we also need to synchronize files alongside the SQLite DB state.
+
+A registered file is the file that is recorded in the local SQLite database. Every file has an `is_uploaded` property.
+The app iterates over all registered files in the local database. Based on this property and the file existence in FS, the app does one of the following:
+
+1. `is_uploaded` is `true` and file exists in FS - then the app does nothing. Everything is good.
+2. `is_uploaded` is `true` and file does not exist in FS - then the app downloads the file from the sync server.
+3. `is_uploaded` is `false` and file exists in FS - then the app uploads the file and sets `is_uploaded` to `true`.
+   The file is encrypted before uploading.
+4. `is_uploaded` is `false` and file does exists in FS - then the app logs a problem. Ideally, such situation should not even exist.
+   If it happens, then it means that someone/something has modified the app data directory (or a bug, but come on, it is definitely something else :upside_down_face:).
+
+Files synchronization task runs concurrently with the main synchronization task. The synchronization process ends when both tasks finish.
+
+The app can discover new files during database sync. For example, when you add a new file on the first device, synchronize the data, and then try to sync the data on the second device.
+
+When this happens, the main synchronization task notifies the files synchronization task that there is a new file to download.
+These two tasks communicate over the [channel](https://docs.rs/tauri/2.7.0/tauri/async_runtime/fn.channel.html).
+
+```rust
+// https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/dataans/src-tauri/src/dataans/sync/mod.rs#L133-L138
+let (sender, receiver) = channel::<FileId>(CHANNEL_BUFFER_SIZE);
+
+let main_sync_fut = synchronizer.synchronize(emitter, sender);
+let file_sync_fut = synchronizer.synchronize_files(emitter, receiver);
+
+let (main_result, file_result) = futures::join!(main_sync_fut, file_sync_fut);
+```
+
 # What is next?
 
-# References & final note
+I am happy I managed to implement it. I was a bit frustrated about it because the path to the final solution was very rough.
+Such an intuitive and simple feature turned out to be quite complex and hard to implement.
+
+Currently, I have implemented most of the major app backend features I needed. I am continuing to develop the Dataans.
+But I will focus more on the app frontend features. I think the next major releases will contain a lot of UI and UX improvements.
+I have a long list of amazing features :sparkles:.
+
+If you are interested in contributing to or using the Dataans, feel free to ask any questions :relaxed:.
+
+# References
 
 1. [GitHub/TheBestTvarynka/Dataans/releases/v.0.3.0](https://github.com/TheBestTvarynka/Dataans/releases/tag/v.0.3.0).
-2. [Cloudflare Zero Trust Access](https://www.cloudflare.com/zero-trust/products/access/).
-3. [Neon](https://github.com/neondatabase/neon).
+2. [GitHub/TheBestTvarynka/Dataans](https://github.com/TheBestTvarynka/Dataans).
+3. [Cloudflare Zero Trust Access](https://www.cloudflare.com/zero-trust/products/access/).
+4. [Neon](https://github.com/neondatabase/neon).
+5. [fly.io](https://fly.io/).
+6. [Operation-based_CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#Operation-based_CRDTs).
+7. [github/TheBestTvarynka/Dataans/6c898a01/doc/sync_server.md](https://github.com/TheBestTvarynka/Dataans/blob/6c898a01afc0942cb94b5dbc822349d8afa924ee/doc/sync_server.md).
