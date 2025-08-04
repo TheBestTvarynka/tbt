@@ -17,9 +17,9 @@ thumbnail = "dataans-v030-thumbnail.png"
 
 # Intro
 
-The Dataans app has followed a local first approach since the very beginning of its existence.
+The Dataans app has adopted a local-first approach since the very beginning of its existence.
 After some time, I started to use the app on many devices and inside my Windows/Linux VMs.
-I caught myself on a thought that it would be good to be able to transfer the data from one device to another.
+I caught myself thinking that it would be good to be able to transfer data from one device to another.
 Fast forward two months, and suddenly I realized that it is a critical feature for me.
 After some considerations and small research, I understood that I wanted the multi-device synchronization feature.
 
@@ -34,8 +34,6 @@ Before explaining how it works and how I implemented it, I want to show you the 
 > _Better to see something once than hear about it a thousand times._
 
 [Asian Proverb](https://skeptics.stackexchange.com/q/28487).
-
-Below is a picture-by-picture guide; at the end of this section, you can find a complete video.
 
 So, first, the user needs to log in. Open the `App-info` window by clicking on the app version number in the bottom left corner of the main window. Then, type the sync server address and click log in:
 
