@@ -1,13 +1,13 @@
 +++
-title = "FreeRDP smart card support. Lore 1"
-date = 2024-08-30
+title = "How RDP smart card logon works"
+date = 2025-09-30
 draft = false
 
 [taxonomies]
 tags = ["rust", "freerdp", "scard", "linux", "debugging"]
 
 [extra]
-keywords = "Rust, FreeRDP, Smart Card, Debugging"
+keywords = "Rust, FreeRDP, RDP, Smart Card, Debugging"
 toc = true
 mermaid = true
 +++
