@@ -1,10 +1,10 @@
 +++
 title = "How RDP smart card logon works"
-date = 2025-09-30
+date = 2025-12-01
 draft = false
 
 [taxonomies]
-tags = ["rust", "freerdp", "scard", "linux", "debugging", "kerberos"]
+tags = ["rust", "freerdp", "scard", "linux", "kerberos", "winscard"]
 
 [extra]
 keywords = "Rust, FreeRDP, RDP, Smart Card, Debugging"
@@ -21,13 +21,19 @@ This post has two main parts: theoretical and practical. I was thinking about tw
 
 After reading this article, you should have enough understanding and skills to set up and troubleshoot your own RDP smart card logon.
 
-_**Note:** In this post, I assume that we want to connect from Linux to Windows using FreeRDP._
+_**Note:** It is much easier to do smart card logon on Windows, so I assume we run FreeRDP on Linux (or macOS) and our target machine runs Windows._
+
+You may be surprised (sarcasm), but it is not easy to do scard logon on Linux when connecting to the Windows machine.
+It became easier with [recent improvement](https://github.com/Devolutions/sspi-rs/pull/492) in `sspi-rs`. I have a lot to say, let's dive in.
 
 # How it works
 
+Each section explains the theoretical aspects of RDP smart card logon and the software component we will use for it.
+Sometimes it is not trivial because not all Microsoft components have exact replacements on Linux.
+
 ## RDP NLA
 
-Now we need to understand how the scard authorization works. Without this knowledge we can't move further. The RDP auth is very complicated thing. So, I'll focus my attention only on scard-related things.
+Now we need to understand how the scard authorization works. Without this knowledge we can't move further. The RDP is very complicated thing. So, I'll focus my attention only on scard-related things.
 
 So, the first thing you need to know is [Network Level Authentication](https://en.wikipedia.org/wiki/Remote_Desktop_Services#Network_Level_Authentication):
 
@@ -68,6 +74,9 @@ The SPNEGO selects (negotiates) an appropriate authentication protocol and perfo
 As the result, we'll have an established security context with some secure encryption key.
 In turn, the CredSSP will use this key to encrypt the credentials and pass (delegate) them to the target CredSSP (RDP) server.
 
+FreeRDP implements the CredSSP protocol, so there is not any pit falls.
+Its CredSSP implementation can rely on either the built-in NTLM implementation, [the MIT KRB5 implementation](https://web.mit.edu/kerberos/krb5-latest/doc/), or an external `/sspi-module:` — a dynamic library that implements the SSPI interface. Spoiler: We will use an external library.
+
 Good. Now you have a brief overview of the NLA. Now it's time to move forward.
 
 ## Kerberos
@@ -84,7 +93,7 @@ The CredSSP client transfers user's username, password, and domain to the target
 In turn, the target server tries to login the user using this credentials.
 But we cannot send the smart card to the target server :upside_down_face:. According to the specification, smart card credentials are defined as follows:
 
-```asn1
+```js
 -- https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-cssp/94a1ab00-5500-42fd-8d3d-7a84e6c2cf03
 TSCredentials ::= SEQUENCE {
         credType    [0] INTEGER,
@@ -113,7 +122,7 @@ I want to go through every field and explain their meaning:
 
 - `credType` = `2` (according to the specification).
 - `pin` - smart card PIN code.
-- `userHint` - username. **Important**: the username must be **only** username. The target server may reject the FQDN. `t2@example.com` :x: -> `t2` :white_check_mark:.
+- `userHint` - username. **Important**: the username must be **only** username. The target server [may reject](https://github.com/Devolutions/sspi-rs/pull/494) the FQDN. `t2@example.com` :x: -> `t2` :white_check_mark:.
 - `domainHint` - domain.
 - `keySpec` = `AT_KEYEXCHANGE` = `1`. ([AD FS and certificate KeySpec property information](https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/technical-reference/ad-fs-and-keyspec-property)):
   > The KeySpec property identifies how a key, that is generated or retrieved using the Microsoft CryptoAPI (CAPI) from a Microsoft legacy Cryptographic Storage Provider (CSP), can be used.
@@ -136,7 +145,46 @@ I want to go through every field and explain their meaning:
 
   Therefore, the container name is a _unique_ string that represents the smart card certificate and its private key.
   And, of course, it is internally generated during scard certificate enrollment on Windows.
-  We cannot precalculate or extract it from somewhere. A small trick is used to generate this value (explained below).
+  We cannot precalculate or extract it from somewhere. A small trick is used to generate this value:
+
+  ```rust
+  // https://github.com/Devolutions/sspi-rs/blob/dea60b5ef60932efdbf22e0806954d8c236fbb78/ffi/src/winscard/piv.rs#L134C1-L212
+  fn chuid_to_container_name(chuid: &[u8], tag: [u8; 3]) -> Result<String> {
+      // ... (some lines are omitted) ...
+      // `chuid` - smart card Card Holder Unique Identifier.
+
+      let guid = &chuid[BYTES_TO_SKIP..BYTES_TO_SKIP + 16 /* GUID length */];
+
+      // Construct the value Windows would use for a PIV key's container name.
+      let container_name = format!(
+          "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+          guid[3],
+          guid[2],
+          guid[1],
+          guid[0],
+          guid[5],
+          guid[4],
+          guid[7],
+          guid[6],
+          guid[8],
+          guid[9],
+          guid[10],
+          guid[11],
+          guid[12],
+          tag[0],
+          tag[1],
+          tag[2]
+      );
+
+      Ok(container_name)
+  }
+  ```
+
+  This is how [FreeRDP constructs](https://github.com/FreeRDP/FreeRDP/blob/3fc1c3ce31b5af1098d15603d7b3fe1c93cf77a5/winpr/libwinpr/ncrypt/ncrypt_pkcs11.c#L865-L964) a container name for the certificate.
+  It takes a smart card CHUID, extracts a GUID value, and combines it with the certificate PIV tag to construct a unique container name.
+  Since every smart card CHUID is unique and there is only one certificate per slot, the constructed value is guaranteed to be unique.
+  Moreover, the uniqueness is not the critical part. The crucial part is that the container name format must meet Windows expectations.
+  Last year, in one of my posts, I explained and provided an example of how a bad container name can cause issues in smart card logon: [tbt.qkation.com/posts/scard-container-name/#what](https://tbt.qkation.com/posts/scard-container-name/#what).
 
 ## Scard driver
 
@@ -167,6 +215,15 @@ This dll is used by BaseCSP to perform basic cryptography operations. This allow
 
 ![](capiinterface.png)
 
+I have the [YubiKey 5 Nano](www.yubico.com/ua/product/yubikey-5-nano/) smart card and will use it in this article.
+Of course, YubiKey has its own [smart card minidriver implementation](https://www.yubico.com/support/download/smart-card-drivers-tools/), which must be installed on the target machine: [Deploying the YubiKey Smart Card Minidriver to workstations and servers](https://support.yubico.com/hc/en-us/articles/360015654560-Deploying-the-YubiKey-Smart-Card-Minidriver-to-workstations-and-servers).
+
+But what about Linux? We do not have minidrivers here... FreeRDP (and `sspi-rs`) relies on the PKCS11 module (dynamic library) for executing crypto operations.
+
+> In cryptography, **PKCS #11** is a Public-Key Cryptography Standard that defines a C programming interface to create and manipulate cryptographic tokens that may contain secret cryptographic keys. It is often used to communicate with a Hardware Security Module or smart cards. ([Wiki](https://en.wikipedia.org/wiki/PKCS_11))
+
+Fortunately, YubiKey distributes its own PKCS11 library too: [`libykcs11`](https://developers.yubico.com/yubico-piv-tool/YKCS11/).
+
 However, that's not the end: each smart card minidriver communicates with the smart card through a unified API: [WinSCard API](https://learn.microsoft.com/en-us/windows/win32/api/winscard/). :arrow_down:
 
 ## WinSCard
@@ -178,6 +235,12 @@ The WinSCard API enables communications with smart card hardware. It is the lowe
 The WinSCard API is based on the PC/SC (Personal Computer/Smart Card) specification - a globally implemented standard for cards and readers ([https://www.smartcardbasics.com/pc-sc/](https://www.smartcardbasics.com/pc-sc/)).
 
 > The advantage of PC/SC is that applications do not have to acknowledge the details corresponding to the smart card reader when communicating with the smart card. This application can function with any reader that complies with the PC/SC standard. ([src](https://www.cardlogix.com/glossary/pc-sc/)).
+
+On Windows we have WinSCard API, but on Linux we have [pcsc-lite](https://pcsclite.apdu.fr/):
+
+> PC/SC is the de facto cross-platform API for accessing smart card readers. It is published by [PC/SC Workgroup](http://www.pcscworkgroup.com/) but the _"reference implementation"_ is Windows. Linux and Mac OS X use the open source [pcsc-lite](https://pcsclite.apdu.fr/) package. ([src](https://github.com/OpenSC/OpenSC/wiki/PCSC-and-pcsc-lite))
+
+
 
 ## Let's put it all together
 
