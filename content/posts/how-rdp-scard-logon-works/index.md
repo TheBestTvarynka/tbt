@@ -240,9 +240,36 @@ On Windows we have WinSCard API, but on Linux we have [pcsc-lite](https://pcscli
 
 > PC/SC is the de facto cross-platform API for accessing smart card readers. It is published by [PC/SC Workgroup](http://www.pcscworkgroup.com/) but the _"reference implementation"_ is Windows. Linux and Mac OS X use the open source [pcsc-lite](https://pcsclite.apdu.fr/) package. ([src](https://github.com/OpenSC/OpenSC/wiki/PCSC-and-pcsc-lite))
 
+Everything looks good from the first sight: `libykcs11` uses `pcsc-lite`, both of them are available on Linux. Seems like nothing stops us from scard logon.
+Unfortunately, there is one thing.
+
+The target machine tries to open a new session using the transferred smart card credentials. Internally, the same high-lever APIs are used except WinSCard API.
+All WinSCard API calls are redirected to the client machine (via [[MS-RDPESC]: Remote Desktop Protocol: Smart Card Virtual Channel Extension](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpesc/0428ca28-b4dc-46a3-97c3-01887fa44a90)). Soooo?
+Obviously, we will call `pcsc-lite` API on linux instead WinSCard, because we do not have WinSCard API here. The problem is that the `pcsc-lite` API does not match WinSCard API identically.
+There are differences:
+
+* Most of them are listed in the documentation: [https://pcsclite.apdu.fr/api/group__API.html#differences](https://pcsclite.apdu.fr/api/group__API.html#differences).
+* `pcsc-lite` API does not contain some functions as WinSCard. For example: `SCardReadCache`.
+* Some function has `-A` and `-W` variations. For example: `SCardConnectA` and `SCardConnectW`.
+
+A `pcsc-lite` wrapper needed to be implemented to match the original WinSCard API. [FreeRDP's  implementation](https://github.com/FreeRDP/FreeRDP/blob/3fc1c3ce31b5af1098d15603d7b3fe1c93cf77a5/winpr/libwinpr/smartcard/smartcard_pcsc.c#L3185-L3265) is not complete.
+It lacks a proper WinSCard cache implementation. The target machine expects the client side to have the needed WinSCard smart card cache items.
+
+It is a real problem: the target machine will not authenticate the client without a properly working smart card cache. Otherwise, the target machine will display a message such as _"This smart card could not be used. Additional detail may be available in the system log. Please report this error to your administrator."_ or _"The requested key container does not exist on the smart card."_.
+
+To my knowledge, the `sspi-rs`'s FFI module is the only open-source library that implements proper smart card cache items: [github/Devolutions/sspi-rs/dea60b5e/ffi/src/winscard/system_scard/context.rs#L283-L564](https://github.com/Devolutions/sspi-rs/blob/dea60b5ef60932efdbf22e0806954d8c236fbb78/ffi/src/winscard/system_scard/context.rs#L283-L564).
+Now, with this final software component, we can finally set up FreeRDP scard logon :star_struck: :hot_face:.
 
 
 ## Let's put it all together
+
+| software component | meaning | Windows | Linux |
+|-|-|-|-|
+| RDP client | _no comments_ | `mstsc.exe` | FreeRDP |
+| CredSSP protocol | Performs NLA. Transfers user credentials to the target server | `credssp.dll` | Implemented inside FreeRDP |
+| Kerberos protocol | Authenticates the user and the server. Established the security context | Implemented inside Windows | Implemented inside `sspi-rs`: `libsspi` |
+| Smart card (mini)driver | Transforms high-level crypto operations into low-level PCSC commands | YubiKey Smart Card Minidriver | `libykcs11` |
+| PC/SC | Enables communications with smart card hardware | WinSCard | `libsspi`: `pcsc-lite` wrapper with proper smart card cache implementation |
 
 # Setting up
 
