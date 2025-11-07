@@ -169,6 +169,21 @@ The KDC will verify the signature using the client's certificate.
 
 That's all :upside_down_face:. Someday I will write a detailed post about Kerberos scard auth, but today is not that day :grimacing:.
 
+The FreeRDP itself does not implement the Kerberos protocol. It uses the external library for that instead.
+FreeRDP's CredSSP implementation uses [the SSPI interface](https://tbt.qkation.com/posts/sspi-introduction/) to perform the authentication.
+Here we have a few options:
+
+1. Enable the `WITH_KRB5` and `WITH_KRB5_MIT` flags and provide [MIT KRB5](https://web.mit.edu/kerberos/krb5-latest/doc/) library for FreeRDP (see [FreeRDP/wiki/Compilation](https://github.com/FreeRDP/FreeRDP/wiki/Compilation)).
+   FreeRDP has a wrapper over MIT KRB5 to export its functionality via the SSPI interface: [FreeRDP/winpr/libwinpr/sspi/Kerberos/krb5glue_mit.c](https://github.com/FreeRDP/FreeRDP/blob/2eb88390f94071c0d46974381a3953e0d382f114/winpr/libwinpr/sspi/Kerberos/krb5glue_mit.c) + [FreeRDP/winpr/libwinpr/sspi/Kerberos/kerberos.c](https://github.com/FreeRDP/FreeRDP/blob/2eb88390f94071c0d46974381a3953e0d382f114/winpr/libwinpr/sspi/Kerberos/kerberos.c).
+2. Provide our own SSPI implementation using the `/sspi-module` arg. It can be any library that implements the SSPI interface.
+
+Surprisingly, we will follow the second path. We will use the following open-source SSPI implementation: [github/Devolutions/sspi-rs](https://github.com/Devolutions/sspi-rs). It supports both Kerberos password-based and scard-based logon and has various other pros:
+
+* More easy to set-up and configure.
+* Easier logs reading and configuring.
+* Do not need to install new packages (e.g. `libkrb5-dev`) and link them with FreeRDP.
+* Implemented in Rust :upside_down_face:.
+
 ## Scard credentials
 
 The CredSSP client transfers user's username, password, and domain to the target server during password-based logon.
