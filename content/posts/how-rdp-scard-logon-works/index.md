@@ -372,11 +372,93 @@ At this point, I hope it all makes sense to you :crossed_fingers:.
 
 # Setting up
 
+Finally! We've lived enough to start configuring this machinery :star_struck:.
+
+If you would like to replicate the configuration below in your own environment, I have some prerequisites for you:
+
+* You know how to configure, and even more, you have them configured:
+  * Windows Server Active Directory and Certificate Authority.
+  * Domain joined-machines to make the RDP connection.
+* You possess a YubiKey, a PIV-compatible smart card device. [The list of suitable devices](https://www.yubico.com/authentication-standards/smart-card/):
+  > YubiKey 5 NFC, YubiKey 5 Nano, YubiKey 5C, and YubiKey 5C Nano provide Smart Card functionality based on the Personal Identity Verification (PIV) interface specified in NIST SP 800-73, “Cryptographic Algorithms and Key Sizes for PIV.”
+
+  For example, I own YubiKey 5 Nano.
+* You enrolled the smart card certificate.
+
 ## Smart card
+
+## WinSCard
+
+As I said above, we will use [`sspi-rs`](https://github.com/Devolutions/sspi-rs) to provide FreeRDP with the custom WinSCard API implementation.
+
+```bash
+# The `sspi-rs` was in commit `ffd920b7b396739b60a6e1bae701f31e735deeef` at the time of writing this article.
+git clone https://github.com/Devolutions/sspi-rs.git
+cd sspi-rs/ffi
+cargo build --features scard
+
+file ../target/debug/libsspi.so
+# You should see something like this:
+# ../target/debug/libsspi.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=eb4b2d386823f59cbd4bd7ed08055f887db6c45b, with debug_info, not stripped
+```
+
+You can confirm that the `libsspi.so` library exports the WinSCard API by running:
+
+```bash
+readelf -Ws --dyn-syms ../target/debug/libsspi.so | grep -E " SCard"
+```
+
+To configure the WinSCard API implementation, we need to set the following environment variables:
+
+| name | meaning | example |
+|-|-|-|
+| `WINSCARD_USE_SYSTEM_SCARD` | Tells the `sspi-rs` to use the system-provided (real) smart card instead of emulated one | `true` |
 
 ## Kerberos
 
-## Demo
+As I said above, we will use [`sspi-rs`](https://github.com/Devolutions/sspi-rs) to provide FreeRDP with the Kerberos protocol implementation.
+`sspi-rs` exports both SSPI and WinSCard APIs from the same library file.
+Thus, at this point, we already have the Kerberos implementation exported via the SSPI interface inside `libsspi.so` from the previous step.
+You can confirm that by checking the exported functions. For example:
+
+```bash
+readelf -Ws --dyn-syms ../target/debug/libsspi.so | grep -E "SecurityContext(A|W)?$"
+# You should see simething like this:
+#    153: 00000000003066f0  2841 FUNC    GLOBAL DEFAULT   12 AcceptSecurityContext
+#    197: 00000000003bfe30  2900 FUNC    GLOBAL DEFAULT   12 InitializeSecurityContextA
+#    223: 0000000000308f60  2248 FUNC    GLOBAL DEFAULT   12 ImpersonateSecurityContext
+#    233: 00000000003c2850  2272 FUNC    GLOBAL DEFAULT   12 ImportSecurityContextA
+#    234: 00000000003c0990  2900 FUNC    GLOBAL DEFAULT   12 InitializeSecurityContextW
+#    235: 000000000030bb40  2271 FUNC    GLOBAL DEFAULT   12 ExportSecurityContext
+#    257: 00000000003c3130  2272 FUNC    GLOBAL DEFAULT   12 ImportSecurityContextW
+#    269: 0000000000309830  2248 FUNC    GLOBAL DEFAULT   12 RevertSecurityContext
+#    273: 0000000000307c60  2595 FUNC    GLOBAL DEFAULT   12 DeleteSecurityContext
+# 105839: 00000000003c2850  2272 FUNC    GLOBAL DEFAULT   12 ImportSecurityContextA
+# 105866: 00000000003c0990  2900 FUNC    GLOBAL DEFAULT   12 InitializeSecurityContextW
+# 105872: 0000000000307c60  2595 FUNC    GLOBAL DEFAULT   12 DeleteSecurityContext
+# 105878: 00000000003bfe30  2900 FUNC    GLOBAL DEFAULT   12 InitializeSecurityContextA
+# 105887: 00000000003c3130  2272 FUNC    GLOBAL DEFAULT   12 ImportSecurityContextW
+# 105896: 0000000000308f60  2248 FUNC    GLOBAL DEFAULT   12 ImpersonateSecurityContext
+# 105929: 00000000003066f0  2841 FUNC    GLOBAL DEFAULT   12 AcceptSecurityContext
+# 105957: 000000000030bb40  2271 FUNC    GLOBAL DEFAULT   12 ExportSecurityContext
+# 105978: 0000000000309830  2248 FUNC    GLOBAL DEFAULT   12 RevertSecurityContext
+```
+
+We need to set the following environment variables to properly configure Kerberos:
+
+| name | meaning | example |
+|-|-|-|
+| `SSPI_LOG_PATH` | Path to the logfile | `~/delete_it/sspi.log` |
+| `SSPI_LOG_LEVEL` | Logging level | `trace` |
+| `SSPI_KDC_URL` | Url to the KDC server or KDC Proxy server. You can omit this value if the DNS is [properly configured](https://i.imgflip.com/7h0kjh.png). | `tcp://192.168.1.104:88` |
+| `SSPI_SCARD_TYPE` | `sspi-rs` also implements the emulated smart card. We need to specify it to use the system-provided (real) smart card | `system` |
+| `SSPI_PKCS11_MODULE_PATH` | Path to the PKCS11 module | `/usr/local/lib/libykcs11.so` |
+
+## FreeRDP
+
+## Let's put it all together
+
+# Demo
 
 # Doc, references, code
 
