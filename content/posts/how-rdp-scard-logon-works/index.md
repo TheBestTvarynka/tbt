@@ -85,7 +85,89 @@ To log on using smart card we need the SPNEGO to select the Kerberos as a applic
 **Kerberos is the only authentication protocol that can be used for scard logon.**
 In order to support password-less logon, Kerberos has the PKINIT extension: [Public Key Cryptography for Initial Authentication in Kerberos (PKINIT)](https://datatracker.ietf.org/doc/html/rfc4556).
 
-// TODO
+The only difference between password-based Kerberos and scard-based is in the AS exchange ([The Authentication Service Exchange](https://www.rfc-editor.org/rfc/rfc4120#section-3.1)). During password-based logon, the AS exchange session key is generated from the user's password:
+
+```rs
+// https://github.com/Devolutions/picky-rs/blob/628bbcab3100a782971261022f0ec91b4f4549f5/picky-krb/src/crypto/aes/key_derivation.rs#L39-L51
+pub fn derive_key_from_password<P: AsRef<[u8]>, S: AsRef<[u8]>>(
+    password: P,
+    salt: S,
+    aes_size: &AesSize,
+) -> KerberosCryptoResult<Vec<u8>> {
+    let mut tmp = vec![0; aes_size.key_length()];
+
+    pbkdf2_hmac::<Sha1>(password.as_ref(), salt.as_ref(), AES_ITERATION_COUNT, &mut tmp);
+
+    // For AES encryption (https://www.rfc-editor.org/rfc/rfc3962.html#section-6):
+    // > random-to-key function        identity function
+    let temp_key = random_to_key(tmp);
+
+    // A Key Derivation Function (https://www.rfc-editor.org/rfc/rfc3961.html#section-5.1).
+    derive_key(&temp_key, KERBEROS, aes_size)
+}
+```
+
+Essentially, it means that if someone knows the user's password, they can decrypt the AsRep encrypted part, extract a session key, and decrypt-and-extract all other sequential keys in the Kerberos authentication (e.g. TGS exchange session key).
+
+Thus, always enforce a strong password policy :upside_down_face:. However, I am not here to discuss Kerberos attack vectors and vulnerabilities.
+So, what is different in the scard-based logon?
+
+During the scard-based logon, the AS exchange session key is derived using the [the Diffie-Hellman Key Exchange](https://datatracker.ietf.org/doc/html/rfc4556#section-3.2.3.1).
+PKINIT also defined the [Public Key Encryption](https://datatracker.ietf.org/doc/html/rfc4556#section-3.2.3.2) but I haven't seen it in action ever.
+I always see the Diffie-Hellman Key Exchange in the Wireshark capture of the `mstsc`.
+
+> [Diffie–Hellman (DH) key exchange](https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange) is a mathematical method of securely generating a symmetric cryptographic key over a public channel.
+
+It means that two parties can **_securely_** establish an encryption key over a public network.
+There are tons of articles explaining how the Diffie-Hellman Key Agreement works.
+Let me paste only a small description and move on.
+
+1. The client generates DH parameters and private key.
+2. Using the DH parameters and private key, the client generates the public key.
+   ```rs
+   // https://github.com/Devolutions/picky-rs/blob/628bbcab3100a782971261022f0ec91b4f4549f5/picky-krb/src/crypto/diffie_hellman.rs#L145-L149
+
+   /// [Key and Parameter Requirements](https://www.rfc-editor.org/rfc/rfc2631#section-2.2)
+   /// y is then computed by calculating g^x mod p.
+   pub fn compute_public_key(private_key: &[u8], modulus: &[u8], base: &[u8]) -> DiffieHellmanResult<Vec<u8>> {
+       generate_dh_shared_secret(base, private_key, modulus)
+   }
+   ```
+3. The client sends DH parameters and public key to the server (KDC in our case).
+4. The server generates its own private and public keys.
+5. Both parties can generate the shared secret (symmetric encryption key) using DH algorithm:
+   ```rs
+   // https://github.com/Devolutions/picky-rs/blob/628bbcab3100a782971261022f0ec91b4f4549f5/picky-krb/src/crypto/diffie_hellman.rs#L94-L112
+
+   /// [Using Diffie-Hellman Key Exchange](https://www.rfc-editor.org/rfc/rfc4556.html#section-3.2.3.1)
+   /// let DHSharedSecret be the shared secret value. DHSharedSecret is the value ZZ
+   ///
+   /// [Generation of ZZ](https://www.rfc-editor.org/rfc/rfc2631#section-2.1.1)
+   /// ZZ = g ^ (xb * xa) mod p
+   /// ZZ = (yb ^ xa)  mod p  = (ya ^ xb)  mod p
+   /// where ^ denotes exponentiation
+   fn generate_dh_shared_secret(public_key: &[u8], private_key: &[u8], p: &[u8]) -> DiffieHellmanResult<Vec<u8>> {
+       let public_key = BoxedUint::from_be_slice_vartime(public_key);
+       let private_key = BoxedUint::from_be_slice_vartime(private_key);
+       let p = Odd::new(BoxedUint::from_be_slice_vartime(p))
+           .into_option()
+           .ok_or(DiffieHellmanError::ModulusIsNotOdd)?;
+       let p = BoxedMontyParams::new_vartime(p);
+
+       // ZZ = (public_key ^ private_key) mod p
+       let out = pow_mod_params(&public_key, &private_key, &p);
+       Ok(out.to_be_bytes().to_vec())
+   }
+   ```
+6. Using the derived encryption key, the server encrypts all needed data and sends it to the client alongside the DH public key.
+
+Of course, I've omitted many technical details, but I'm here to convey the overall idea, not to teach you cryptography.
+The astute reader may notice that the smart card is not required for the Diffie-Hellman exchange.
+
+The smart card is needed **_ONLY_** for signing the digest of all these public authentication parameters: DH parameters, DH public key, nonce, etc ([source code](https://github.com/Devolutions/sspi-rs/blob/ffd920b7b396739b60a6e1bae701f31e735deeef/src/pk_init.rs#L75-L239)).
+The KDC will verify the signature using the client's certificate.
+
+That's all :upside_down_face:. Someday I will write a detailed post about Kerberos scard auth, but today is not that day :grimacing:.
 
 ## Scard credentials
 
@@ -266,10 +348,12 @@ Now, with this final software component, we can finally set up FreeRDP scard log
 | software component | meaning | Windows | Linux |
 |-|-|-|-|
 | RDP client | _no comments_ | `mstsc.exe` | FreeRDP |
-| CredSSP protocol | Performs NLA. Transfers user credentials to the target server | `credssp.dll` | Implemented inside FreeRDP |
-| Kerberos protocol | Authenticates the user and the server. Established the security context | Implemented inside Windows | Implemented inside `sspi-rs`: `libsspi` |
-| Smart card (mini)driver | Transforms high-level crypto operations into low-level PCSC commands | YubiKey Smart Card Minidriver | `libykcs11` |
-| PC/SC | Enables communications with smart card hardware | WinSCard | `libsspi`: `pcsc-lite` wrapper with proper smart card cache implementation |
+| CredSSP protocol | Performs NLA. Transfers user credentials to the target server | `credssp.dll` | FreeRDP |
+| Kerberos protocol | Authenticates the user and the server. Established the security context | Implemented inside Windows | [`libsspi.so`](https://github.com/Devolutions/sspi-rs/tree/master/ffi/src/sspi) - Kerberos client implementation with scard logon support |
+| Smart card (mini)driver | Transforms high-level crypto operations into low-level PCSC commands | [YubiKey Smart Card Minidriver](https://www.yubico.com/support/download/smart-card-drivers-tools/) | [`libykcs11.so`](https://developers.yubico.com/yubico-piv-tool/YKCS11/) |
+| PC/SC | Enables communications with smart card hardware | WinSCard | [`libsspi.so`](https://github.com/Devolutions/sspi-rs/tree/master/ffi/src/winscard) - WinSCard-compatible `pcsc-lite` wrapper with proper smart card cache implementation |
+
+At this point, I hope it all makes sense to you :crossed_fingers:.
 
 # Setting up
 
