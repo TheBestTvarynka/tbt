@@ -576,8 +576,22 @@ export SSPI_SCARD_TYPE=system
 export SSPI_PKCS11_MODULE_PATH=/usr/local/lib/libykcs11.so.2.5.2
 export WINSCARD_USE_SYSTEM_SCARD=true
 
-./sdl-freerdp /v:DESKTOP-QELPR32.tbt.com /u:t2 /d:tbt.com /p:123456 /smartcard-logon /sec:nla /cert:ignore /log-level:TRACE /sspi-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so /kerberos:pkcs11-module:/usr/local/lib/libykcs11.so.2.5.2 /winscard-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so
+./sdl-freerdp /v:DESKTOP-QELPR32.tbt.com /u:t2 /d:tbt.com /p:123456 /smartcard-logon /sec:nla \
+  /cert:ignore /log-level:TRACE \
+  /sspi-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so \
+  /kerberos:pkcs11-module:/usr/local/lib/libykcs11.so.2.5.2 \
+  /winscard-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so
 ```
+
+```bash
+LD_PRELOAD=/usr/lib/libpcsclite.so.1 ./sdl-freerdp /v:DESKTOP-QELPR32.tbt.com /u:t2 /d:tbt.com /p:123456 /smartcard-logon /sec:nla /cert:ignore /log-level:TRACE /sspi-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so /kerberos:pkcs11-module:/usr/local/lib/libykcs11.so.2.5.2 /winscard-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so > rdp.out.txt 2> rdp.err.txt
+```
+
+![](./failed_scard_logon.png)
+
+And, it did not work :raised_eyebrow: :sneezing_face:.
+
+![](./pikachu.png)
 
 # Doc, references, code
 
