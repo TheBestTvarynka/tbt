@@ -387,6 +387,71 @@ If you would like to replicate the configuration below in your own environment, 
 
 ## Smart card
 
+I already have a ready-to-go smart card. The user certificate is enrolled and valid:
+
+```bash
+ykman piv info
+```
+
+You should have something like that:
+
+```bash
+PIV version:              5.4.3
+PIN tries remaining:      3/3
+PUK tries remaining:      0/3
+Management key algorithm: TDES
+WARNING: Using default PIN!
+PUK is blocked
+Management key is stored on the YubiKey, protected by PIN.
+CHUID: 3019d4e739da739ced39ce739d836858210842108421c84210c3eb34101df30c281471d9a216caed2291f8e494350832303330303130313e00fe00
+CCC:   No data available
+Slot 9A (AUTHENTICATION):
+  Private key type: RSA2048
+  Public key type:  RSA2048
+  Subject DN:       
+  Issuer DN:        CN=tbt-WIN-956CQOSSJTF-CA,DC=tbt,DC=com
+  Serial:           00:1c:00:00:00:11:a3:a9:8c:0c:7d:22:25:df:00:00:00:00:00:11
+  Fingerprint:      bbb2ff52231e831d4d7b3c575c8f7bb8c50c941ac2121a0000d68d4d540255e5
+  Not before:       2025-10-23T17:17:44+00:00
+  Not after:        2027-10-23T17:27:44+00:00
+
+Slot 9D (KEY_MANAGEMENT):
+  Private key type: RSA2048
+```
+
+And here is the certificate itself: [`t2@tbt.com.cer`](./t2@tbt.com.cer). You can export it from your smart card using the following command:
+
+```bash
+ykman piv certificates export ${SLOT_ID} ${PATH_TO_FILE}
+# Example:
+ykman piv certificates export 9a ~/delete_it/t2@tbt.com.cer
+```
+
+And the last step in configuring the smart card in installing [`libykcs11.so`](https://developers.yubico.com/yubico-piv-tool/YKCS11/).
+
+> YKCS11 is automatically built as part of yubico-piv-tool
+
+```bash
+git clone https://github.com/Yubico/yubico-piv-tool.git
+cd yubico-piv-tool
+cmake ..
+make
+sudo make install
+```
+
+When working with smart cards I like to check if the scard works well using the following command:
+
+```bash
+echo "TheBestTvarynka" | pkcs11-tool --module "/usr/local/lib/libykcs11.so.2.5.2" -m RSA-PKCS -p 123456 -s --id 01 | base64
+# You should get the base64-encoded signature:
+# SRA+CTXAYJRO3Wz42K9W/4qeHlV2WmY/t6bDumdSOf7+KL1/32E7Cuq55GIdkDnZnCfHZp89Eyq/
+# TEcV2GAnbyiMiUqlZb1iBEYyYOf5ovaJ7xy4dPIuEvkJLMVJPpCCJ7Cr9zolpTEmfZ7FMZVbtprS
+# 04ho4P2lz60eJ00Bykrerwc4FcmIPs7tNX//1EJVNLrlXdEBYlxH8ZOFnYtMUggf80EJJlWxTHjT
+# ZTz8/+KNZRSFwHR+lZikzxMDaVx4Kiq+2w5NMrSA0MQlFA7fvHOBRh4LBAdHPHzXmgCMWNM1cAbm
+# h9PrXdMlo24Xdj+EHZRRLsD7HfeVYPWYNhCvoC0tW1RCVF0tPjogR2V0RnVuY3Rpb25MaXN0IHN0
+# YXJ0IQotLVtUQlRdLT46IEdldEZ1bmN0aW9uTGlzdCBzdWNjZXNzIQo=
+```
+
 ## WinSCard
 
 As I said above, we will use [`sspi-rs`](https://github.com/Devolutions/sspi-rs) to provide FreeRDP with the custom WinSCard API implementation.
@@ -413,6 +478,30 @@ To configure the WinSCard API implementation, we need to set the following envir
 | name | meaning | example |
 |-|-|-|
 | `WINSCARD_USE_SYSTEM_SCARD` | Tells the `sspi-rs` to use the system-provided (real) smart card instead of emulated one | `true` |
+
+The last step in this section is to ensure that the `pcsc-lite` is installed on your system and running:
+
+```bash
+# I use Arch bwt
+sudo pacman -S pcsclite
+sudo systemctl enable pcscd
+sudo systemctl start pcscd
+sudo systemctl status pcscd
+# ● pcscd.service - PC/SC Smart Card Daemon
+#      Loaded: loaded (/usr/lib/systemd/system/pcscd.service; indirect; preset: disabled)
+#      Active: active (running) since Sat 2025-11-08 12:28:03 EET; 5s ago
+#  Invocation: e7d44e3ded3c4a19a388887891599d6b
+# TriggeredBy: ● pcscd.socket
+#        Docs: man:pcscd(8)
+#    Main PID: 265031 (pcscd)
+#       Tasks: 5 (limit: 18705)
+#      Memory: 1.4M (peak: 2.7M)
+#         CPU: 65ms
+#      CGroup: /system.slice/pcscd.service
+#              └─265031 /usr/bin/pcscd --foreground --auto-exit
+
+# Nov 08 12:28:03 tbt systemd[1]: Started PC/SC Smart Card Daemon.
+```
 
 ## Kerberos
 
@@ -456,9 +545,39 @@ We need to set the following environment variables to properly configure Kerbero
 
 ## FreeRDP
 
-## Let's put it all together
+Now to the hard part. Compiling the C/C++ project was always a nightmare for me. Time passes, and I become more skilled in it, but it remains unpleasant.
+
+Fortunately, FreeRDP has an excellent compilation guide: [FreeRDP/wiki/Compilation](https://github.com/FreeRDP/FreeRDP/wiki/Compilation).
+Unfortunately, versions of some dependencies are outdated (at the moment), so I used the macOS bundling script ([FreeRDP/scripts/bundle-mac-os.sh](https://github.com/FreeRDP/FreeRDP/blob/2eb88390f94071c0d46974381a3953e0d382f114/scripts/bundle-mac-os.sh)) to help me with compilation.
+
+I'm gonna share only FreeRDP compilation flags:
+
+```bash
+cmake -GNinja -B freerdp-build -S ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON \
+    -DCMAKE_INSTALL_PREFIX=${FREERDP_INSTALL_PATH} -DWITH_SERVER=OFF -DWITH_SAMPLE=OFF \
+    -DWITH_PLATFORM_SERVER=OFF -DUSE_UNWIND=OFF -DWITH_SWSCALE=OFF -DWITH_FFMPEG=OFF \
+    -DWITH_WEBVIEW=OFF -DWITH_PROXY=OFF -DWITH_SMARTCARD_PCSC=OFF -DWITH_SMARTCARD_INSPECT=OFF \
+    -DWITH_KRB5=OFF -DWITH_DEBUG_NLA=ON -DWITH_PKCS11=ON -DWITH_PROXY_MODULES=OFF -DWITH_SWSCALE=OFF \
+    -DWITH_CAIRO=OFF -DCHANNEL_URBDRC=OFF -DWITH_CLIENT_WINDOWS=OFF -DWITH_CLIENT_SDL2=OFF \
+    -DWITH_CLIENT_SDL3=ON
+```
+
+- `-DWITH_SMARTCARD_PCSC=OFF` - we do not need it because we use the costom `pcsc-lite` wrapper. We do not need the built-in one.
+- `-DWITH_KRB5=OFF` - we do not use MIT KRB5, so it is not needed. We use `sspi-rs`'s Kerberos implementation.
+- `-DWITH_PKCS11=ON` - it is needed for the smart card logon. FreeRDP uses PKCS11 module to find the user's certificate on the smart card, obtain a reader name, container name, and all other smart card credentials (see [Scard credentials](#scard-credentials) section).
 
 # Demo
+
+```bash
+export SSPI_LOG_PATH=sspi.log
+export SSPI_LOG_LEVEL=trace
+export SSPI_KDC_URL="tcp://192.168.1.104:88"
+export SSPI_SCARD_TYPE=system
+export SSPI_PKCS11_MODULE_PATH=/usr/local/lib/libykcs11.so.2.5.2
+export WINSCARD_USE_SYSTEM_SCARD=true
+
+./sdl-freerdp /v:DESKTOP-QELPR32.tbt.com /u:t2 /d:tbt.com /p:123456 /smartcard-logon /sec:nla /cert:ignore /log-level:TRACE /sspi-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so /kerberos:pkcs11-module:/usr/local/lib/libykcs11.so.2.5.2 /winscard-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so
+```
 
 # Doc, references, code
 
