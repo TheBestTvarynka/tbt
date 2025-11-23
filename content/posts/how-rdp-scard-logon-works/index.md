@@ -21,7 +21,7 @@ This post has two main parts: theoretical and practical. I was thinking about tw
 
 After reading this article, you should have enough understanding and skills to set up and troubleshoot your own RDP smart card logon.
 
-_**Note:** It is much easier to do smart card logon on Windows, so I assume we run FreeRDP on Linux (or macOS) and our target machine runs Windows._
+_**Note:** It is much easier to do smart card logon on Windows, so I assume we run FreeRDP on macOS and our target machine runs Windows._
 
 You may be surprised (sarcasm), but it is not easy to do scard logon on Linux when connecting to the Windows machine.
 It became easier with [recent improvement](https://github.com/Devolutions/sspi-rs/pull/492) in `sspi-rs`. I have a lot to say, let's dive in.
@@ -85,7 +85,7 @@ To log on using smart card we need the SPNEGO to select the Kerberos as a applic
 **Kerberos is the only authentication protocol that can be used for scard logon.**
 In order to support password-less logon, Kerberos has the PKINIT extension: [Public Key Cryptography for Initial Authentication in Kerberos (PKINIT)](https://datatracker.ietf.org/doc/html/rfc4556).
 
-The only difference between password-based Kerberos and scard-based is in the AS exchange ([The Authentication Service Exchange](https://www.rfc-editor.org/rfc/rfc4120#section-3.1)). During password-based logon, the AS exchange session key is generated from the user's password:
+The only difference between password-based Kerberos and scard-based is in the AS exchange ([The Authentication Service Exchange](https://www.rfc-editor.org/rfc/rfc4120#section-3.1)). During password-based logon, the AS exchange session key is derived from the user's password:
 
 ```rs
 // https://github.com/Devolutions/picky-rs/blob/628bbcab3100a782971261022f0ec91b4f4549f5/picky-krb/src/crypto/aes/key_derivation.rs#L39-L51
@@ -99,7 +99,7 @@ pub fn derive_key_from_password<P: AsRef<[u8]>, S: AsRef<[u8]>>(
     pbkdf2_hmac::<Sha1>(password.as_ref(), salt.as_ref(), AES_ITERATION_COUNT, &mut tmp);
 
     // For AES encryption (https://www.rfc-editor.org/rfc/rfc3962.html#section-6):
-    // > random-to-key function        identity function
+    // > random-to-key function    ``    identity function
     let temp_key = random_to_key(tmp);
 
     // A Key Derivation Function (https://www.rfc-editor.org/rfc/rfc3961.html#section-5.1).
@@ -107,13 +107,13 @@ pub fn derive_key_from_password<P: AsRef<[u8]>, S: AsRef<[u8]>>(
 }
 ```
 
-Essentially, it means that if someone knows the user's password, they can decrypt the AsRep encrypted part, extract a session key, and decrypt-and-extract all other sequential keys in the Kerberos authentication (e.g. TGS exchange session key).
+Essentially, it means that if someone knows the user's password, they can decrypt the `AsRep` encrypted part, extract a session key, and decrypt-and-extract all other sequential keys in the Kerberos authentication (e.g. TGS exchange session key).
 
 Thus, always enforce a strong password policy :upside_down_face:. However, I am not here to discuss Kerberos attack vectors and vulnerabilities.
 So, what is different in the scard-based logon?
 
 During the scard-based logon, the AS exchange session key is derived using the [the Diffie-Hellman Key Exchange](https://datatracker.ietf.org/doc/html/rfc4556#section-3.2.3.1).
-PKINIT also defined the [Public Key Encryption](https://datatracker.ietf.org/doc/html/rfc4556#section-3.2.3.2) but I haven't seen it in action ever.
+PKINIT also defines the [Public Key Encryption](https://datatracker.ietf.org/doc/html/rfc4556#section-3.2.3.2) but I haven't seen it in action ever.
 I always see the Diffie-Hellman Key Exchange in the Wireshark capture of the `mstsc`.
 
 > [Diffie–Hellman (DH) key exchange](https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange) is a mathematical method of securely generating a symmetric cryptographic key over a public channel.
@@ -236,7 +236,7 @@ I want to go through every field and explain their meaning:
   > - **_smart card reader name_**: The friendly, human-readable name of the _smart card reader_. Also referred to as a _Reader Name_.
   > - **_smart card reader_**: A device used as a communication medium between the smart card and a Host; for example, a computer. Also referred to as a Reader.
 
-  The system automatically generates the Reader Name on Windows. But we need to take it from somewhere on Linux. In short, the PKCS11 slot description is used as the reader name (explained below).
+  The system automatically generates the Reader Name on Windows. But we need to take it from somewhere on Linux. In short, the PKCS11 slot description is used as the reader name.
 - `containerName`. ([quote src](https://learn.microsoft.com/en-us/windows/win32/secgloss/k-gly)):
   > key container - A part of the key database that contains all the key pairs (exchange and signature key pairs) belonging to a specific user. Each container has a unique name that is used when calling the `CryptAcquireContext` function to get a handle to the container.
 
@@ -340,7 +340,7 @@ On Windows we have WinSCard API, but on Linux we have [pcsc-lite](https://pcscli
 Everything looks good from the first sight: `libykcs11` uses `pcsc-lite`, both of them are available on Linux. Seems like nothing stops us from scard logon.
 Unfortunately, there is one thing.
 
-The target machine tries to open a new session using the transferred smart card credentials. Internally, the same high-lever APIs are used except WinSCard API.
+The target machine tries to open a new session using the transferred smart card credentials. Internally, the same high-level APIs are used except WinSCard API.
 All WinSCard API calls are redirected to the client machine (via [[MS-RDPESC]: Remote Desktop Protocol: Smart Card Virtual Channel Extension](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpesc/0428ca28-b4dc-46a3-97c3-01887fa44a90)). Soooo?
 Obviously, we will call `pcsc-lite` API on linux instead WinSCard, because we do not have WinSCard API here. The problem is that the `pcsc-lite` API does not match WinSCard API identically.
 There are differences:
@@ -427,13 +427,14 @@ ykman piv certificates export ${SLOT_ID} ${PATH_TO_FILE}
 ykman piv certificates export 9a ~/delete_it/t2@tbt.com.cer
 ```
 
-And the last step in configuring the smart card in installing [`libykcs11.so`](https://developers.yubico.com/yubico-piv-tool/YKCS11/).
+And the last step in configuring the smart card is installing [`libykcs11.so`](https://developers.yubico.com/yubico-piv-tool/YKCS11/).
 
 > YKCS11 is automatically built as part of yubico-piv-tool
 
 ```bash
 git clone https://github.com/Yubico/yubico-piv-tool.git
 cd yubico-piv-tool
+mkdir build; cd build
 cmake ..
 make
 sudo make install
@@ -560,6 +561,8 @@ cmake -GNinja -B freerdp-build -S ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SKIP_INST
     -DWITH_KRB5=OFF -DWITH_DEBUG_NLA=ON -DWITH_PKCS11=ON -DWITH_PROXY_MODULES=OFF -DWITH_SWSCALE=OFF \
     -DWITH_CAIRO=OFF -DCHANNEL_URBDRC=OFF -DWITH_CLIENT_WINDOWS=OFF -DWITH_CLIENT_SDL2=OFF \
     -DWITH_CLIENT_SDL3=ON
+
+cmake -GNinja -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15 -B freerdp-build -S ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON -DCMAKE_INSTALL_PREFIX=./install/ -DWITH_SERVER=OFF -DWITH_SAMPLE=OFF -DWITH_PLATFORM_SERVER=OFF -DUSE_UNWIND=OFF -DWITH_SWSCALE=OFF -DWITH_FFMPEG=OFF -DWITH_WEBVIEW=OFF -DWITH_PROXY=OFF -DWITH_SMARTCARD_PCSC=ON -DWITH_KRB5=ON -DWITH_KRB5_NO_NTLM_FALLBACK=ON -DWITH_DEBUG_NLA=ON -DWITH_PKCS11=ON -DWITH_PROXY_MODULES=OFF -DCMAKE_C_FLAGS="-I/opt/homebrew/include/SDL2/" -DCMAKE_CXX_FLAGS="-I/opt/homebrew/include/SDL2/" -DKRB5_ROOT_CONFIG=/opt/homebrew/opt/krb5/bin/krb5-config
 ```
 
 - `-DWITH_SMARTCARD_PCSC=OFF` - we do not need it because we use the costom `pcsc-lite` wrapper. We do not need the built-in one.
@@ -573,25 +576,17 @@ export SSPI_LOG_PATH=sspi.log
 export SSPI_LOG_LEVEL=trace
 export SSPI_KDC_URL="tcp://192.168.1.104:88"
 export SSPI_SCARD_TYPE=system
-export SSPI_PKCS11_MODULE_PATH=/usr/local/lib/libykcs11.so.2.5.2
+export SSPI_PKCS11_MODULE_PATH=/usr/local/lib/libykcs11.2.7.2.dylib
 export WINSCARD_USE_SYSTEM_SCARD=true
 
 ./sdl-freerdp /v:DESKTOP-QELPR32.tbt.com /u:t2 /d:tbt.com /p:123456 /smartcard-logon /sec:nla \
   /cert:ignore /log-level:TRACE \
-  /sspi-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so \
-  /kerberos:pkcs11-module:/usr/local/lib/libykcs11.so.2.5.2 \
-  /winscard-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so
+  /sspi-module:/Users/user/delete_it/sspi-rs/target/debug/libsspi.dylib \
+  /kerberos:pkcs11-module:/usr/local/lib/libykcs11.2.7.2.dylib \
+  /winscard-module:/Users/user/delete_it/sspi-rs/target/debug/libsspi.dylib 
 ```
 
-```bash
-LD_PRELOAD=/usr/lib/libpcsclite.so.1 ./sdl-freerdp /v:DESKTOP-QELPR32.tbt.com /u:t2 /d:tbt.com /p:123456 /smartcard-logon /sec:nla /cert:ignore /log-level:TRACE /sspi-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so /kerberos:pkcs11-module:/usr/local/lib/libykcs11.so.2.5.2 /winscard-module:/home/pavlo-myroniuk/delete_it/sspi-rs/target/debug/libsspi.so > rdp.out.txt 2> rdp.err.txt
-```
-
-![](./failed_scard_logon.png)
-
-And, it did not work :raised_eyebrow: :sneezing_face:.
-
-![](./pikachu.png)
+![](./rdp_success.jpg)
 
 # Doc, references, code
 
