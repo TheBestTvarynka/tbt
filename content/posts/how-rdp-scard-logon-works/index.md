@@ -4,7 +4,7 @@ date = 2025-12-01
 draft = false
 
 [taxonomies]
-tags = ["rust", "freerdp", "scard", "linux", "kerberos", "winscard", "pcsclite"]
+tags = ["rust", "freerdp", "scard", "kerberos", "winscard", "pcsclite"]
 
 [extra]
 keywords = "Rust, FreeRDP, RDP, Smart Card"
@@ -24,13 +24,13 @@ After reading this article, you should have enough understanding and skills to s
 
 _**Note:** It is much easier to do smart card logon on Windows, so I assume we run FreeRDP on macOS and our target machine runs Windows._
 
-You may be surprised (sarcasm), but it is not easy to do scard logon on Linux when connecting to the Windows machine.
+You may be surprised (sarcasm), but it is not easy to do scard logon on macOS when connecting to the Windows machine.
 It became easier with [recent improvement](https://github.com/Devolutions/sspi-rs/pull/492) in `sspi-rs`. I have a lot to say, let's dive in.
 
 # How it works
 
 Each section explains the theoretical aspects of RDP smart card logon and the software component we will use for it.
-Sometimes it is not trivial because not all Microsoft components have exact replacements on Linux.
+Sometimes it is not trivial because not all Microsoft components have exact replacements on macOS.
 
 ## RDP NLA
 
@@ -76,7 +76,8 @@ As a result, we'll have an established security context with a secure encryption
 In turn, the CredSSP will use this key to encrypt the credentials and pass (delegate) them to the target CredSSP (RDP) server.
 
 FreeRDP implements the CredSSP protocol, so there are no pitfalls.
-Its CredSSP implementation can rely on either the built-in NTLM implementation, [the MIT KRB5 implementation](https://web.mit.edu/kerberos/krb5-latest/doc/), or an external `/sspi-module:` — a dynamic library that implements the SSPI interface. Spoiler: We will use an external library.
+Its CredSSP implementation can rely on either the built-in NTLM implementation, [the MIT KRB5 implementation](https://web.mit.edu/kerberos/krb5-latest/doc/), or an external `/sspi-module:` — a dynamic library that implements [the SSPI interface](https://tbt.qkation.com/posts/sspi-introduction/).
+Spoiler: We will use an external library.
 
 Good. Now you have a brief overview of the NLA. Now it's time to move forward.
 
@@ -237,7 +238,7 @@ I want to go through every field and explain its meaning:
   > - **_smart card reader name_**: The friendly, human-readable name of the _smart card reader_. Also referred to as a _Reader Name_.
   > - **_smart card reader_**: A device used as a communication medium between the smart card and a Host; for example, a computer. Also referred to as a Reader.
 
-  The system automatically generates the Reader Name on Windows. But we need to take it from somewhere on Linux. In short, the PKCS11 slot description is used as the reader name.
+  The system automatically generates the Reader Name on Windows. But we need to take it from somewhere on macOS. In short, the PKCS11 slot description is used as the reader name.
 - `containerName`. ([quote src](https://learn.microsoft.com/en-us/windows/win32/secgloss/k-gly)):
   > key container - A part of the key database that contains all the key pairs (exchange and signature key pairs) belonging to a specific user. Each container has a unique name used when calling `CryptAcquireContext` to obtain a handle to the container.
 
@@ -308,7 +309,7 @@ In turn, the `basecsp.dll` uses the smart card minidriver to perform cryptograph
 
 > The card-specific minidriver is the lowest logical interface layer in the Base CSP/KSP. This minidriver lets the Base CSP/KSP and applications interact directly with a specific type of card by using SCRM.
 
-In simple words, the smart card minidriver is a small dll provided by the card vendor that implements the Smart Card Minidriver specification.
+In simple words, the smart card minidriver is a small dll provided by the card vendor that implements [the Smart Card Minidriver specification](https://learn.microsoft.com/en-us/previous-versions/windows/hardware/design/dn631754(v=vs.85)).
 This dll is used by BaseCSP to perform basic cryptography operations. This allows card vendors to reuse Microsoft's cryptography stack and not implement their own CSP:
 
 ![](capiinterface.png)
@@ -316,11 +317,11 @@ This dll is used by BaseCSP to perform basic cryptography operations. This allow
 I have the [YubiKey 5 Nano](www.yubico.com/ua/product/yubikey-5-nano/) smart card and will use it in this article.
 Of course, YubiKey has its own [smart card minidriver implementation](https://www.yubico.com/support/download/smart-card-drivers-tools/), which must be installed on the target machine: [Deploying the YubiKey Smart Card Minidriver to workstations and servers](https://support.yubico.com/hc/en-us/articles/360015654560-Deploying-the-YubiKey-Smart-Card-Minidriver-to-workstations-and-servers).
 
-But what about Linux? We do not have minidrivers here... FreeRDP (and `sspi-rs`) relies on the PKCS11 module (a dynamic library) for executing cryptographic operations.
+But what about macOS? We do not have minidrivers here... FreeRDP (and `sspi-rs`) relies on the PKCS11 module (a dynamic library) for executing cryptographic operations.
 
 > In cryptography, **PKCS #11** is a Public-Key Cryptography Standard that defines a C programming interface to create and manipulate cryptographic tokens that may contain secret cryptographic keys. It is often used to communicate with a Hardware Security Module or smart cards. ([Wiki](https://en.wikipedia.org/wiki/PKCS_11))
 
-Fortunately, YubiKey also distributes its own PKCS11 library: [`libykcs11`](https://developers.yubico.com/yubico-piv-tool/YKCS11/).
+Fortunately, YubiKey also distributes its own PKCS11 library: [`libykcs11.2.7.2.dylib`](https://developers.yubico.com/yubico-piv-tool/YKCS11/).
 
 However, that's not the end: each smart card minidriver communicates with the smart card through a unified API: [WinSCard API](https://learn.microsoft.com/en-us/windows/win32/api/winscard/). :arrow_down:
 
@@ -338,7 +339,7 @@ On Windows, we have WinSCard API, but on macOS, we have [pcsc-lite](https://pcsc
 
 > PC/SC is the de facto cross-platform API for accessing smart card readers. It is published by [PC/SC Workgroup](http://www.pcscworkgroup.com/), but the _"reference implementation"_ is Windows. Linux and Mac OS X use the open source [pcsc-lite](https://pcsclite.apdu.fr/) package. ([src](https://github.com/OpenSC/OpenSC/wiki/PCSC-and-pcsc-lite))
 
-Everything looks good at first sight: `libykcs11` uses `pcsc-lite`, both of them are available on Linux. Seems like nothing stops us from scard logon.
+Everything looks good at first sight: `libykcs11` uses `pcsc-lite`, both of them are available on macOS. Seems like nothing stops us from scard logon.
 Unfortunately, there is one thing.
 
 The target machine tries to open a new session using the transferred smart card credentials. Internally, the same high-level APIs are used except for the WinSCard API.
@@ -361,13 +362,13 @@ Now, with this final software component, we can finally set up FreeRDP scard log
 
 ## Let's put it all together
 
-| software component | meaning | Windows | Linux |
+| software component | meaning | Windows | macOS |
 |-|-|-|-|
 | RDP client | _no comments_ | `mstsc.exe` | FreeRDP |
 | CredSSP protocol | Performs NLA. Transfers user credentials to the target server | `credssp.dll` | FreeRDP |
-| Kerberos protocol | Authenticates the user and the server. Established the security context | Implemented inside Windows | [`libsspi.so`](https://github.com/Devolutions/sspi-rs/tree/master/ffi/src/sspi) - Kerberos client implementation with scard logon support |
-| Smart card (mini)driver | Transforms high-level crypto operations into low-level PCSC commands | [YubiKey Smart Card Minidriver](https://www.yubico.com/support/download/smart-card-drivers-tools/) | [`libykcs11.so`](https://developers.yubico.com/yubico-piv-tool/YKCS11/) |
-| PC/SC | Enables communications with smart card hardware | WinSCard | [`libsspi.so`](https://github.com/Devolutions/sspi-rs/tree/master/ffi/src/winscard) - WinSCard-compatible `pcsc-lite` wrapper with proper smart card cache implementation |
+| Kerberos protocol | Authenticates the user and the server. Established the security context | Implemented inside Windows | [`libsspi.dylib`](https://github.com/Devolutions/sspi-rs/tree/master/ffi/src/sspi) - Kerberos client implementation with scard logon support |
+| Smart card (mini)driver | Transforms high-level crypto operations into low-level PCSC commands | [YubiKey Smart Card Minidriver](https://www.yubico.com/support/download/smart-card-drivers-tools/) | [`libykcs11.2.7.2.dylib`](https://developers.yubico.com/yubico-piv-tool/YKCS11/) - a PKCS#11 module |
+| PC/SC | Enables communications with smart card hardware | WinSCard | [`libsspi.dylib`](https://github.com/Devolutions/sspi-rs/tree/master/ffi/src/winscard) - WinSCard-compatible `pcsc-lite` wrapper with proper smart card cache implementation |
 
 At this point, I hope it all makes sense to you :crossed_fingers:.
 
@@ -428,7 +429,7 @@ ykman piv certificates export ${SLOT_ID} ${PATH_TO_FILE}
 ykman piv certificates export 9a ~/delete_it/t2@tbt.com.cer
 ```
 
-And the last step in configuring the smart card is installing [`libykcs11.so`](https://developers.yubico.com/yubico-piv-tool/YKCS11/).
+And the last step in configuring the smart card is installing [`libykcs11.2.7.2.dylib`](https://developers.yubico.com/yubico-piv-tool/YKCS11/).
 
 > YKCS11 is automatically built as part of yubico-piv-tool
 
@@ -444,7 +445,7 @@ sudo make install
 When working with smart cards, I like to check if the smart scard works well using the following command:
 
 ```bash
-echo "TheBestTvarynka" | pkcs11-tool --module "/usr/local/lib/libykcs11.so.2.5.2" -m RSA-PKCS -p 123456 -s --id 01 | base64
+echo "TheBestTvarynka" | pkcs11-tool --module "/usr/local/lib/libykcs11.2.7.2.dylib" -m RSA-PKCS -p 123456 -s --id 01 | base64
 # You should get the base64-encoded signature:
 # SRA+CTXAYJRO3Wz42K9W/4qeHlV2WmY/t6bDumdSOf7+KL1/32E7Cuq55GIdkDnZnCfHZp89Eyq/
 # TEcV2GAnbyiMiUqlZb1iBEYyYOf5ovaJ7xy4dPIuEvkJLMVJPpCCJ7Cr9zolpTEmfZ7FMZVbtprS
@@ -464,15 +465,15 @@ git clone https://github.com/Devolutions/sspi-rs.git
 cd sspi-rs/ffi
 cargo build --features scard
 
-file ../target/debug/libsspi.so
+file ../target/debug/libsspi.dylib
 # You should see something like this:
-# ../target/debug/libsspi.so: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=eb4b2d386823f59cbd4bd7ed08055f887db6c45b, with debug_info, not stripped
+# ../target/debug/libsspi.dylib: ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, BuildID[sha1]=eb4b2d386823f59cbd4bd7ed08055f887db6c45b, with debug_info, not stripped
 ```
 
-You can confirm that the `libsspi.so` library exports the WinSCard API by running:
+You can confirm that the `libsspi.dylib` library exports the WinSCard API by running:
 
 ```bash
-readelf -Ws --dyn-syms ../target/debug/libsspi.so | grep -E " SCard"
+readelf -Ws --dyn-syms ../target/debug/libsspi.dylib | grep -E " SCard"
 ```
 
 To configure the WinSCard API implementation, we need to set the following environment variables:
@@ -509,11 +510,11 @@ sudo systemctl status pcscd
 
 As I mentioned above, we will use [`sspi-rs`](https://github.com/Devolutions/sspi-rs) to provide FreeRDP with a Kerberos implementation.
 `sspi-rs` exports both SSPI and WinSCard APIs from the same library file.
-Thus, at this point, we already have the Kerberos implementation exported via the SSPI interface inside `libsspi.so` from the previous step.
+Thus, at this point, we already have the Kerberos implementation exported via the SSPI interface inside `libsspi.dylib` from the previous step.
 You can confirm that by checking the exported functions. For example:
 
 ```bash
-readelf -Ws --dyn-syms ../target/debug/libsspi.so | grep -E "SecurityContext(A|W)?$"
+readelf -Ws --dyn-syms ../target/debug/libsspi.dylib | grep -E "SecurityContext(A|W)?$"
 # You should see simething like this:
 #    153: 00000000003066f0  2841 FUNC    GLOBAL DEFAULT   12 AcceptSecurityContext
 #    197: 00000000003bfe30  2900 FUNC    GLOBAL DEFAULT   12 InitializeSecurityContextA
@@ -543,7 +544,7 @@ We need to set the following environment variables to configure Kerberos properl
 | `SSPI_LOG_LEVEL` | Logging level | `trace` |
 | `SSPI_KDC_URL` | Url to the KDC server or KDC Proxy server. You can omit this value if the DNS is [properly configured](https://i.imgflip.com/7h0kjh.png). | `tcp://192.168.1.104:88` |
 | `SSPI_SCARD_TYPE` | `sspi-rs` also implements the emulated smart card. We need to specify it to use the system-provided (real) smart card | `system` |
-| `SSPI_PKCS11_MODULE_PATH` | Path to the PKCS11 module | `/usr/local/lib/libykcs11.so` |
+| `SSPI_PKCS11_MODULE_PATH` | Path to the PKCS11 module | `/usr/local/lib/libykcs11.2.7.2.dylib` |
 
 ## FreeRDP
 
@@ -551,24 +552,6 @@ Now to the hard part. Compiling the C/C++ project was always a nightmare for me.
 
 Fortunately, FreeRDP has an excellent compilation guide: [FreeRDP/wiki/Compilation](https://github.com/FreeRDP/FreeRDP/wiki/Compilation).
 Unfortunately, versions of some dependencies are outdated (at the moment), so I used the macOS bundling script ([FreeRDP/scripts/bundle-mac-os.sh](https://github.com/FreeRDP/FreeRDP/blob/2eb88390f94071c0d46974381a3953e0d382f114/scripts/bundle-mac-os.sh)) to help me with compilation.
-
-I'm gonna share only FreeRDP compilation flags:
-
-```bash
-cmake -GNinja -B freerdp-build -S ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON \
-    -DCMAKE_INSTALL_PREFIX=${FREERDP_INSTALL_PATH} -DWITH_SERVER=OFF -DWITH_SAMPLE=OFF \
-    -DWITH_PLATFORM_SERVER=OFF -DUSE_UNWIND=OFF -DWITH_SWSCALE=OFF -DWITH_FFMPEG=OFF \
-    -DWITH_WEBVIEW=OFF -DWITH_PROXY=OFF -DWITH_SMARTCARD_PCSC=OFF -DWITH_SMARTCARD_INSPECT=OFF \
-    -DWITH_KRB5=OFF -DWITH_DEBUG_NLA=ON -DWITH_PKCS11=ON -DWITH_PROXY_MODULES=OFF -DWITH_SWSCALE=OFF \
-    -DWITH_CAIRO=OFF -DCHANNEL_URBDRC=OFF -DWITH_CLIENT_WINDOWS=OFF -DWITH_CLIENT_SDL2=OFF \
-    -DWITH_CLIENT_SDL3=ON
-
-cmake -GNinja -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15 -B freerdp-build -S ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON -DCMAKE_INSTALL_PREFIX=./install/ -DWITH_SERVER=OFF -DWITH_SAMPLE=OFF -DWITH_PLATFORM_SERVER=OFF -DUSE_UNWIND=OFF -DWITH_SWSCALE=OFF -DWITH_FFMPEG=OFF -DWITH_WEBVIEW=OFF -DWITH_PROXY=OFF -DWITH_SMARTCARD_PCSC=ON -DWITH_KRB5=ON -DWITH_KRB5_NO_NTLM_FALLBACK=ON -DWITH_DEBUG_NLA=ON -DWITH_PKCS11=ON -DWITH_PROXY_MODULES=OFF -DCMAKE_C_FLAGS="-I/opt/homebrew/include/SDL2/" -DCMAKE_CXX_FLAGS="-I/opt/homebrew/include/SDL2/" -DKRB5_ROOT_CONFIG=/opt/homebrew/opt/krb5/bin/krb5-config
-```
-
-- `-DWITH_SMARTCARD_PCSC=OFF` - we do not need it because we use the custom `pcsc-lite` wrapper. We do not need the built-in one.
-- `-DWITH_KRB5=OFF` - we do not use MIT KRB5, so it is not needed. We use `sspi-rs`'s Kerberos implementation.
-- `-DWITH_PKCS11=ON` - it is needed for the smart card logon. FreeRDP uses a PKCS11 module to find the user's certificate on the smart card, obtain a reader name, container name, and all other smart card credentials (see [Scard credentials](#scard-credentials) section).
 
 # Demo
 
