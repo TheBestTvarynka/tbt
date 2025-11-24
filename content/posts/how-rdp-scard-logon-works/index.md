@@ -1,6 +1,6 @@
 +++
 title = "How RDP smart card logon works"
-date = 2025-12-01
+date = 2025-11-24
 draft = false
 
 [taxonomies]
