@@ -4,12 +4,13 @@ date = 2025-12-01
 draft = false
 
 [taxonomies]
-tags = ["rust", "freerdp", "scard", "linux", "kerberos", "winscard"]
+tags = ["rust", "freerdp", "scard", "linux", "kerberos", "winscard", "pcsclite"]
 
 [extra]
-keywords = "Rust, FreeRDP, RDP, Smart Card, Debugging"
+keywords = "Rust, FreeRDP, RDP, Smart Card"
 toc = true
 mermaid = true
+thumbnail = "how-rdp-scard-logon-works-thumbnail.png"
 +++
 
 # Intro
@@ -587,6 +588,8 @@ export WINSCARD_USE_SYSTEM_SCARD=true
 ```
 
 ![](./rdp_success.jpg)
+
+It was quite a short demo :sweat_smile:. But it works!
 
 # Doc, references, code
 
