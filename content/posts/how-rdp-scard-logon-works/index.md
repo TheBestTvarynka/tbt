@@ -16,7 +16,7 @@ thumbnail = "how-rdp-scard-logon-works-thumbnail.png"
 # Intro
 
 Around two years ago, FreeRDP got smart card logon support: [Smartcard logon with FreeRDP](https://www.hardening-consulting.com/en/posts/20231004-smartcard-logon.html).
-Theoretically (and sometimes practically), it is possible to use a smart card (scard) for RDP logon in FreeRDP. In this post, I will try to explain how RDP scard logon works and how to set it up.
+Theoretically (and sometimes practically), it is possible to use a smart card (scard) for RDP logon in FreeRDP. In this post, I will explain how RDP scard logon works and how to set it up.
 
 This post has two main parts: theoretical and practical. I was thinking about two separate posts, but then I decided that I don't want to split theory and practice.
 
@@ -34,7 +34,7 @@ Sometimes it is not trivial because not all Microsoft components have exact repl
 
 ## RDP NLA
 
-Now we need to understand how the scard authorization works. Without this knowledge we can't move further. The RDP is very complicated thing. So, I'll focus my attention only on scard-related things.
+Now we need to understand how the scard authorization works. Without this knowledge, we can't move further. The RDP is very complicated. So, I'll focus my attention only on scard-related things.
 
 So, the first thing you need to know is [Network Level Authentication](https://en.wikipedia.org/wiki/Remote_Desktop_Services#Network_Level_Authentication):
 
@@ -61,30 +61,30 @@ flowchart LR
 {% end %}
 
 The CredSSP protocol performs the user authentication ([using NTLM/Kerberos/SPNEGO protocols inside](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-cssp/78e0d50f-5a99-45e8-9f8b-d8a2bd67d4eb)) and transfers the user's credentials to the target server.
-The CredSSP protocol is only responsible for credentials delegation. It doesn't authenticate clients or servers. An actual auth is performed by the inner application protocol like NTLM, or Kerberos (preferable).
+The CredSSP protocol is responsible only for credential delegation. It doesn't authenticate clients or servers. An actual authentication is performed by the inner application protocol, like NTLM, or Kerberos (preferably).
 
-But Microsoft would not be Microsoft if they did not add another layer of abstraction. The CredSSP uses [the SPNEGO framework](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-spng/b16309d8-4a93-4fa6-9ee2-7d84b2451c84): ([quote src](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-cssp/e36b36f6-edf4-4df1-9905-9e53b7d7c7b7))
+But Microsoft would not be Microsoft if it did not add another layer of abstraction. The CredSSP uses [the SPNEGO framework](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-spng/b16309d8-4a93-4fa6-9ee2-7d84b2451c84): ([quote src](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-cssp/e36b36f6-edf4-4df1-9905-9e53b7d7c7b7))
 
 > SPNEGO provides a framework for two parties that are engaged in authentication to select from a set of possible authentication mechanisms.
 >
 > ...The CredSSP Protocol uses SPNEGO to mutually authenticate the CredSSP client and CredSSP server. It then uses the encryption key that is established under SPNEGO to securely bind to the TLS session.
 
-Let's summarize it.
+I think we should summarize it.
 
-The SPNEGO selects (negotiates) an appropriate authentication protocol and performs an authentication using this protocol.
-As the result, we'll have an established security context with some secure encryption key.
+The SPNEGO selects (negotiates) an appropriate authentication protocol and performs authentication using it.
+As a result, we'll have an established security context with a secure encryption key.
 In turn, the CredSSP will use this key to encrypt the credentials and pass (delegate) them to the target CredSSP (RDP) server.
 
-FreeRDP implements the CredSSP protocol, so there is not any pit falls.
+FreeRDP implements the CredSSP protocol, so there are no pitfalls.
 Its CredSSP implementation can rely on either the built-in NTLM implementation, [the MIT KRB5 implementation](https://web.mit.edu/kerberos/krb5-latest/doc/), or an external `/sspi-module:` — a dynamic library that implements the SSPI interface. Spoiler: We will use an external library.
 
 Good. Now you have a brief overview of the NLA. Now it's time to move forward.
 
 ## Kerberos
 
-To log on using smart card we need the SPNEGO to select the Kerberos as a application protocol for authentication.
+To log on with a smart card, we need SPNEGO to select Kerberos as the authentication protocol.
 **Kerberos is the only authentication protocol that can be used for scard logon.**
-In order to support password-less logon, Kerberos has the PKINIT extension: [Public Key Cryptography for Initial Authentication in Kerberos (PKINIT)](https://datatracker.ietf.org/doc/html/rfc4556).
+To support password-less logon, Kerberos includes the PKINIT extension: [Public Key Cryptography for Initial Authentication in Kerberos (PKINIT)](https://datatracker.ietf.org/doc/html/rfc4556).
 
 The only difference between password-based Kerberos and scard-based is in the AS exchange ([The Authentication Service Exchange](https://www.rfc-editor.org/rfc/rfc4120#section-3.1)). During password-based logon, the AS exchange session key is derived from the user's password:
 
@@ -110,11 +110,11 @@ pub fn derive_key_from_password<P: AsRef<[u8]>, S: AsRef<[u8]>>(
 
 Essentially, it means that if someone knows the user's password, they can decrypt the `AsRep` encrypted part, extract a session key, and decrypt-and-extract all other sequential keys in the Kerberos authentication (e.g. TGS exchange session key).
 
-Thus, always enforce a strong password policy :upside_down_face:. However, I am not here to discuss Kerberos attack vectors and vulnerabilities.
+Thus, always enforce a strong password policy :upside_down_face:. However, I am not here to talk about Kerberos attack vectors and vulnerabilities.
 So, what is different in the scard-based logon?
 
 During the scard-based logon, the AS exchange session key is derived using the [the Diffie-Hellman Key Exchange](https://datatracker.ietf.org/doc/html/rfc4556#section-3.2.3.1).
-PKINIT also defines the [Public Key Encryption](https://datatracker.ietf.org/doc/html/rfc4556#section-3.2.3.2) but I haven't seen it in action ever.
+PKINIT also defines the [Public Key Encryption](https://datatracker.ietf.org/doc/html/rfc4556#section-3.2.3.2), but I haven't seen it in action ever.
 I always see the Diffie-Hellman Key Exchange in the Wireshark capture of the `mstsc`.
 
 > [Diffie–Hellman (DH) key exchange](https://en.wikipedia.org/wiki/Diffie%E2%80%93Hellman_key_exchange) is a mathematical method of securely generating a symmetric cryptographic key over a public channel.
@@ -123,7 +123,7 @@ It means that two parties can **_securely_** establish an encryption key over a 
 There are tons of articles explaining how the Diffie-Hellman Key Agreement works.
 Let me paste only a small description and move on.
 
-1. The client generates DH parameters and private key.
+1. The client generates DH parameters and a private key.
 2. Using the DH parameters and private key, the client generates the public key.
    ```rs
    // https://github.com/Devolutions/picky-rs/blob/628bbcab3100a782971261022f0ec91b4f4549f5/picky-krb/src/crypto/diffie_hellman.rs#L145-L149
@@ -136,7 +136,7 @@ Let me paste only a small description and move on.
    ```
 3. The client sends DH parameters and public key to the server (KDC in our case).
 4. The server generates its own private and public keys.
-5. Both parties can generate the shared secret (symmetric encryption key) using DH algorithm:
+5. Both parties can generate the shared secret (symmetric encryption key) using the DH algorithm:
    ```rs
    // https://github.com/Devolutions/picky-rs/blob/628bbcab3100a782971261022f0ec91b4f4549f5/picky-krb/src/crypto/diffie_hellman.rs#L94-L112
 
@@ -180,15 +180,15 @@ Here we have a few options:
 
 Surprisingly, we will follow the second path. We will use the following open-source SSPI implementation: [github/Devolutions/sspi-rs](https://github.com/Devolutions/sspi-rs). It supports both Kerberos password-based and scard-based logon and has various other pros:
 
-* More easy to set-up and configure.
+* Easier to set up and configure.
 * Easier logs reading and configuring.
-* Do not need to install new packages (e.g. `libkrb5-dev`) and link them with FreeRDP.
+* Do not need to install new packages (e.g., `libkrb5-dev`) and link them with FreeRDP.
 * Implemented in Rust :upside_down_face:.
 
 ## Scard credentials
 
-The CredSSP client transfers user's username, password, and domain to the target server during password-based logon.
-In turn, the target server tries to login the user using this credentials.
+During password-based logon, the CredSSP client transfers the user's username, password, and domain to the target server.
+In turn, the target server tries to log in the user using these credentials.
 But we cannot send the smart card to the target server :upside_down_face:. According to the specification, smart card credentials are defined as follows:
 
 ```js
@@ -216,7 +216,7 @@ TSCspDataDetail ::= SEQUENCE {
 }
 ```
 
-I want to go through every field and explain their meaning:
+I want to go through every field and explain its meaning:
 
 - `credType` = `2` (according to the specification).
 - `pin` - smart card PIN code.
@@ -232,14 +232,14 @@ I want to go through every field and explain their meaning:
   > An independent software module that actually performs cryptography algorithms for authentication, encoding, and encryption.
 
   In our case, it is always equal to [`Microsoft Base Smart Card Crypto Provider`](https://learn.microsoft.com/en-us/windows/win32/seccertenroll/cryptoapi-cryptographic-service-providers#microsoft-base-smart-card-crypto-provider).
-  It supports smart cards and implements algorithms to hash, sign, and encrypt data. We do not need to know internals, but only that it uses smart cards for crypto operations.
+  It supports smart cards and implements algorithms for hashing, signing, and encrypting data. We do not need to know internals, but only that it uses smart cards for crypto operations.
 - `readerName`. ([quote src](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpesc/d361b24c-611e-46c5-9ac6-93cb6490a472)):
   > - **_smart card reader name_**: The friendly, human-readable name of the _smart card reader_. Also referred to as a _Reader Name_.
   > - **_smart card reader_**: A device used as a communication medium between the smart card and a Host; for example, a computer. Also referred to as a Reader.
 
   The system automatically generates the Reader Name on Windows. But we need to take it from somewhere on Linux. In short, the PKCS11 slot description is used as the reader name.
 - `containerName`. ([quote src](https://learn.microsoft.com/en-us/windows/win32/secgloss/k-gly)):
-  > key container - A part of the key database that contains all the key pairs (exchange and signature key pairs) belonging to a specific user. Each container has a unique name that is used when calling the `CryptAcquireContext` function to get a handle to the container.
+  > key container - A part of the key database that contains all the key pairs (exchange and signature key pairs) belonging to a specific user. Each container has a unique name used when calling `CryptAcquireContext` to obtain a handle to the container.
 
   Therefore, the container name is a _unique_ string that represents the smart card certificate and its private key.
   And, of course, it is internally generated during scard certificate enrollment on Windows.
@@ -286,9 +286,9 @@ I want to go through every field and explain their meaning:
 
 ## Scard driver
 
-As explained above, the Kerberos protocol does client and server auth. And, as we can logically assume, it relies on some APIs to communicate with the smart card.
+As explained above, the Kerberos protocol does client and server authentication. And, as we can logically assume, it relies on some APIs to communicate with the smart card.
 
-Let's first discuss how it works on Windows, and then we will move on to Linux. Look at [this diagram from the MSDN](https://learn.microsoft.com/en-us/windows/security/identity-protection/smart-cards/smart-card-architecture):
+Let's first discuss how it works on Windows, then move on to macOS. Look at [this diagram from the MSDN](https://learn.microsoft.com/en-us/windows/security/identity-protection/smart-cards/smart-card-architecture):
 
 ![](sc-image203.gif)
 
@@ -316,11 +316,11 @@ This dll is used by BaseCSP to perform basic cryptography operations. This allow
 I have the [YubiKey 5 Nano](www.yubico.com/ua/product/yubikey-5-nano/) smart card and will use it in this article.
 Of course, YubiKey has its own [smart card minidriver implementation](https://www.yubico.com/support/download/smart-card-drivers-tools/), which must be installed on the target machine: [Deploying the YubiKey Smart Card Minidriver to workstations and servers](https://support.yubico.com/hc/en-us/articles/360015654560-Deploying-the-YubiKey-Smart-Card-Minidriver-to-workstations-and-servers).
 
-But what about Linux? We do not have minidrivers here... FreeRDP (and `sspi-rs`) relies on the PKCS11 module (dynamic library) for executing crypto operations.
+But what about Linux? We do not have minidrivers here... FreeRDP (and `sspi-rs`) relies on the PKCS11 module (a dynamic library) for executing cryptographic operations.
 
 > In cryptography, **PKCS #11** is a Public-Key Cryptography Standard that defines a C programming interface to create and manipulate cryptographic tokens that may contain secret cryptographic keys. It is often used to communicate with a Hardware Security Module or smart cards. ([Wiki](https://en.wikipedia.org/wiki/PKCS_11))
 
-Fortunately, YubiKey distributes its own PKCS11 library too: [`libykcs11`](https://developers.yubico.com/yubico-piv-tool/YKCS11/).
+Fortunately, YubiKey also distributes its own PKCS11 library: [`libykcs11`](https://developers.yubico.com/yubico-piv-tool/YKCS11/).
 
 However, that's not the end: each smart card minidriver communicates with the smart card through a unified API: [WinSCard API](https://learn.microsoft.com/en-us/windows/win32/api/winscard/). :arrow_down:
 
@@ -334,16 +334,16 @@ The WinSCard API is based on the PC/SC (Personal Computer/Smart Card) specificat
 
 > The advantage of PC/SC is that applications do not have to acknowledge the details corresponding to the smart card reader when communicating with the smart card. This application can function with any reader that complies with the PC/SC standard. ([src](https://www.cardlogix.com/glossary/pc-sc/)).
 
-On Windows we have WinSCard API, but on Linux we have [pcsc-lite](https://pcsclite.apdu.fr/):
+On Windows, we have WinSCard API, but on macOS, we have [pcsc-lite](https://pcsclite.apdu.fr/):
 
-> PC/SC is the de facto cross-platform API for accessing smart card readers. It is published by [PC/SC Workgroup](http://www.pcscworkgroup.com/) but the _"reference implementation"_ is Windows. Linux and Mac OS X use the open source [pcsc-lite](https://pcsclite.apdu.fr/) package. ([src](https://github.com/OpenSC/OpenSC/wiki/PCSC-and-pcsc-lite))
+> PC/SC is the de facto cross-platform API for accessing smart card readers. It is published by [PC/SC Workgroup](http://www.pcscworkgroup.com/), but the _"reference implementation"_ is Windows. Linux and Mac OS X use the open source [pcsc-lite](https://pcsclite.apdu.fr/) package. ([src](https://github.com/OpenSC/OpenSC/wiki/PCSC-and-pcsc-lite))
 
-Everything looks good from the first sight: `libykcs11` uses `pcsc-lite`, both of them are available on Linux. Seems like nothing stops us from scard logon.
+Everything looks good at first sight: `libykcs11` uses `pcsc-lite`, both of them are available on Linux. Seems like nothing stops us from scard logon.
 Unfortunately, there is one thing.
 
-The target machine tries to open a new session using the transferred smart card credentials. Internally, the same high-level APIs are used except WinSCard API.
+The target machine tries to open a new session using the transferred smart card credentials. Internally, the same high-level APIs are used except for the WinSCard API.
 All WinSCard API calls are redirected to the client machine (via [[MS-RDPESC]: Remote Desktop Protocol: Smart Card Virtual Channel Extension](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpesc/0428ca28-b4dc-46a3-97c3-01887fa44a90)). Soooo?
-Obviously, we will call `pcsc-lite` API on linux instead WinSCard, because we do not have WinSCard API here. The problem is that the `pcsc-lite` API does not match WinSCard API identically.
+Obviously, we will call the `pcsc-lite` API on macOS instead of WinSCard because we do not have WinSCard here. The problem is that the `pcsc-lite` API does not match the WinSCard API identically.
 There are differences:
 
 * Most of them are listed in the documentation: [https://pcsclite.apdu.fr/api/group__API.html#differences](https://pcsclite.apdu.fr/api/group__API.html#differences).
@@ -351,7 +351,7 @@ There are differences:
 * Some function has `-A` and `-W` variations. For example: `SCardConnectA` and `SCardConnectW`.
 
 A `pcsc-lite` wrapper needed to be implemented to match the original WinSCard API. [FreeRDP's  implementation](https://github.com/FreeRDP/FreeRDP/blob/3fc1c3ce31b5af1098d15603d7b3fe1c93cf77a5/winpr/libwinpr/smartcard/smartcard_pcsc.c#L3185-L3265) is not complete.
-It lacks a proper WinSCard cache implementation. The target machine expects the client side to have the needed WinSCard smart card cache items.
+It lacks a proper WinSCard cache implementation. The target machine expects the client-side to have the required WinSCard smart card cache items.
 
 It is a real problem: the target machine will not authenticate the client without a properly working smart card cache. Otherwise, the target machine will display a message such as _"This smart card could not be used. Additional detail may be available in the system log. Please report this error to your administrator."_ or _"The requested key container does not exist on the smart card."_. If you are interested in smart card cache items, then check my old post: [tbt.qkation.com/posts/win-scard-cache/](https://tbt.qkation.com/posts/win-scard-cache/).
 
@@ -383,8 +383,8 @@ If you would like to replicate the configuration below in your own environment, 
 * You possess a YubiKey, a PIV-compatible smart card device. [The list of suitable devices](https://www.yubico.com/authentication-standards/smart-card/):
   > YubiKey 5 NFC, YubiKey 5 Nano, YubiKey 5C, and YubiKey 5C Nano provide Smart Card functionality based on the Personal Identity Verification (PIV) interface specified in NIST SP 800-73, “Cryptographic Algorithms and Key Sizes for PIV.”
 
-  For example, I own YubiKey 5 Nano.
-* You enrolled the smart card certificate.
+  For example, I own a YubiKey 5 Nano.
+* You enrolled in the smart card certificate.
 
 ## Smart card
 
@@ -441,7 +441,7 @@ make
 sudo make install
 ```
 
-When working with smart cards I like to check if the scard works well using the following command:
+When working with smart cards, I like to check if the scard works well using the following command:
 
 ```bash
 echo "TheBestTvarynka" | pkcs11-tool --module "/usr/local/lib/libykcs11.so.2.5.2" -m RSA-PKCS -p 123456 -s --id 01 | base64
@@ -507,7 +507,7 @@ sudo systemctl status pcscd
 
 ## Kerberos
 
-As I said above, we will use [`sspi-rs`](https://github.com/Devolutions/sspi-rs) to provide FreeRDP with the Kerberos protocol implementation.
+As I mentioned above, we will use [`sspi-rs`](https://github.com/Devolutions/sspi-rs) to provide FreeRDP with a Kerberos implementation.
 `sspi-rs` exports both SSPI and WinSCard APIs from the same library file.
 Thus, at this point, we already have the Kerberos implementation exported via the SSPI interface inside `libsspi.so` from the previous step.
 You can confirm that by checking the exported functions. For example:
@@ -535,7 +535,7 @@ readelf -Ws --dyn-syms ../target/debug/libsspi.so | grep -E "SecurityContext(A|W
 # 105978: 0000000000309830  2248 FUNC    GLOBAL DEFAULT   12 RevertSecurityContext
 ```
 
-We need to set the following environment variables to properly configure Kerberos:
+We need to set the following environment variables to configure Kerberos properly:
 
 | name | meaning | example |
 |-|-|-|
@@ -566,9 +566,9 @@ cmake -GNinja -B freerdp-build -S ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SKIP_INST
 cmake -GNinja -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=15 -B freerdp-build -S ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON -DCMAKE_INSTALL_PREFIX=./install/ -DWITH_SERVER=OFF -DWITH_SAMPLE=OFF -DWITH_PLATFORM_SERVER=OFF -DUSE_UNWIND=OFF -DWITH_SWSCALE=OFF -DWITH_FFMPEG=OFF -DWITH_WEBVIEW=OFF -DWITH_PROXY=OFF -DWITH_SMARTCARD_PCSC=ON -DWITH_KRB5=ON -DWITH_KRB5_NO_NTLM_FALLBACK=ON -DWITH_DEBUG_NLA=ON -DWITH_PKCS11=ON -DWITH_PROXY_MODULES=OFF -DCMAKE_C_FLAGS="-I/opt/homebrew/include/SDL2/" -DCMAKE_CXX_FLAGS="-I/opt/homebrew/include/SDL2/" -DKRB5_ROOT_CONFIG=/opt/homebrew/opt/krb5/bin/krb5-config
 ```
 
-- `-DWITH_SMARTCARD_PCSC=OFF` - we do not need it because we use the costom `pcsc-lite` wrapper. We do not need the built-in one.
+- `-DWITH_SMARTCARD_PCSC=OFF` - we do not need it because we use the custom `pcsc-lite` wrapper. We do not need the built-in one.
 - `-DWITH_KRB5=OFF` - we do not use MIT KRB5, so it is not needed. We use `sspi-rs`'s Kerberos implementation.
-- `-DWITH_PKCS11=ON` - it is needed for the smart card logon. FreeRDP uses PKCS11 module to find the user's certificate on the smart card, obtain a reader name, container name, and all other smart card credentials (see [Scard credentials](#scard-credentials) section).
+- `-DWITH_PKCS11=ON` - it is needed for the smart card logon. FreeRDP uses a PKCS11 module to find the user's certificate on the smart card, obtain a reader name, container name, and all other smart card credentials (see [Scard credentials](#scard-credentials) section).
 
 # Demo
 
