@@ -61,7 +61,7 @@ flowchart LR
 {% end %}
 
 The CredSSP protocol performs the user authentication ([using NTLM/Kerberos/SPNEGO protocols inside](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-cssp/78e0d50f-5a99-45e8-9f8b-d8a2bd67d4eb)) and transfers the user's credentials to the target server.
-The CredSSP protocol is responsible only for credential delegation. It doesn't authenticate clients or servers. An actual authentication is performed by the inner application protocol, like NTLM, or Kerberos (preferably).
+The CredSSP protocol is responsible only for credential delegation. It doesn't authenticate clients or servers. An actual authentication is performed by the inner application protocol, like NTLM or Kerberos (preferably).
 
 But Microsoft would not be Microsoft if it did not add another layer of abstraction. The CredSSP uses [the SPNEGO framework](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-spng/b16309d8-4a93-4fa6-9ee2-7d84b2451c84): ([quote src](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-cssp/e36b36f6-edf4-4df1-9905-9e53b7d7c7b7))
 
@@ -69,7 +69,7 @@ But Microsoft would not be Microsoft if it did not add another layer of abstract
 >
 > ...The CredSSP Protocol uses SPNEGO to mutually authenticate the CredSSP client and CredSSP server. It then uses the encryption key that is established under SPNEGO to securely bind to the TLS session.
 
-I think we should summarize it.
+Let's summarize it.
 
 The SPNEGO selects (negotiates) an appropriate authentication protocol and performs authentication using it.
 As a result, we'll have an established security context with a secure encryption key.
@@ -108,7 +108,7 @@ pub fn derive_key_from_password<P: AsRef<[u8]>, S: AsRef<[u8]>>(
 }
 ```
 
-Essentially, it means that if someone knows the user's password, they can decrypt the `AsRep` encrypted part, extract a session key, and decrypt-and-extract all other sequential keys in the Kerberos authentication (e.g. TGS exchange session key).
+Essentially, it means that if someone knows the user's password, they can decrypt the `AsRep` encrypted part, extract a session key, and decrypt-and-extract all other sequential keys in the Kerberos authentication (e.g., TGS exchange session key).
 
 Thus, always enforce a strong password policy :upside_down_face:. However, I am not here to talk about Kerberos attack vectors and vulnerabilities.
 So, what is different in the scard-based logon?
@@ -441,7 +441,7 @@ make
 sudo make install
 ```
 
-When working with smart cards, I like to check if the scard works well using the following command:
+When working with smart cards, I like to check if the smart scard works well using the following command:
 
 ```bash
 echo "TheBestTvarynka" | pkcs11-tool --module "/usr/local/lib/libykcs11.so.2.5.2" -m RSA-PKCS -p 123456 -s --id 01 | base64
@@ -479,7 +479,7 @@ To configure the WinSCard API implementation, we need to set the following envir
 
 | name | meaning | example |
 |-|-|-|
-| `WINSCARD_USE_SYSTEM_SCARD` | Tells the `sspi-rs` to use the system-provided (real) smart card instead of emulated one | `true` |
+| `WINSCARD_USE_SYSTEM_SCARD` | Tells the `sspi-rs` to use the system-provided (real) smart card instead of an emulated one | `true` |
 
 The last step in this section is to ensure that the `pcsc-lite` is installed on your system and running:
 
