@@ -26,13 +26,78 @@ Note:
 > _Actually, releases are just checkpoints during the `crypto-helper` development and do not mean anything special._
 > _All features and fixes are deployed and available right after the merging into the `main` branch._
 
-This post contains a comprehensive live of new changes with additional explanations of how to use new functionality.
+This post contains a comprehensive list of new changes with additional explanations of how to use new functionality.
 
 # ASN1 major features
 
 ## ASN1 tree editing
 
 [feat(asn1): implement asn1 tree editing (#105)](https://github.com/TheBestTvarynka/crypto-helper/pull/105).
+
+![](./asn1-tree-editing-pr-stats.png)
+
+This is the biggest and the most wanted feature of this release.
+
+I always wanted the ability to edit the ASN1 tree. I just feels right. If I can view, then most likely I would like to edit...
+But for the past few years I did not have enough time and motivation to implement it. It was just interesting idea (as many other idea in my head). But it changed this summer, when I needed [to generate different certificates](https://github.com/Devolutions/sspi-rs/pull/483/commits/46d04e5b1cccf9aa7e9da704ddf063df6e049081#diff-5c9de79f33bbce03789d71e8b4c0fbd409a4bdcb4c746cedfe4cbfc428036ebf) to test information extraction.
+
+It was a nightmare. How can I generate the same cert but just with a few differences like extension/enhanced key usage or alternate subject name properties?
+I did not care if the cert is trusted or about cert's private key. I only needed certificate files. Basically, the task can be summarized to _how to edit the ASN1 tree_: add, change, or remove ASN1 nodes.
+
+That time I decided to use my [`asn1-parser`](https://github.com/TheBestTvarynka/crypto-helper/tree/main/crates/asn1-parser) crate and _just_ wrote some tests which parse the original certificate, perform needed changes, and encode again into base64.
+It wasn't a pleasure to write such tests. After that I decided to implement ASN1 tree editing no matter what.
+
+After:
+
+    - many hours of designing,
+    - a few PoCs,
+    - `asn1-parser` complete refactoring,
+    - 2.8k lines of code,
+    - ...
+
+I finally came up with the working and very cool (IMHO) implementation. It works as just as I expected. I am even a bit proud of it.
+
+### User guide
+
+So, how to edit the ASN1 tree? The page looks exactly like before ASN1 tree editing was implemented.
+
+![](./asn1-tree-example.png)
+
+#### Editing
+
+To **edit** ASN1 node, hold `ctrl` + click on the node title. For example, let's click on the `Integer` node:
+
+![](./inteter-editing.png)
+
+You will see pop-up menu. Here you can enter any value you want. Multiple formats supported: raw hex/base64 bytes or decimal value (the value will be converted into bytes).
+
+The changes take effect automatically when you type:
+
+![](./integer-editing.gif)
+
+These editing rules apply to every node you see on the screen.
+
+#### Deletion
+
+To **delete** ASN1 node, hold `ctrl` and move the cursor to the start of the node title. You will see a trash icon. Click it and confirm deletion. It will automatically update the entire tree.
+
+![](./deletion-example.gif)
+
+#### Creation
+
+To **create** ASN1 node, hold `ctrl` and move the cursor between other two notes where you want to insert a new node. You will see the plus icon.
+Click on it. You will a pop-up menu. Type the desired node type. The app will automatically select the suitable editor type for the entered node type.
+Type data you want and submit. Demo:
+
+![](./creation-example.gif)
+
+Sometimes you need to create more than one node at a time. For example, when you want to move one sub-tree from one place to another inside the tree.
+The current implementation does not allow it directly, but you can achieve the result by copying the sub-tree, delete it, and then insert in the needed place by creating a new sub-tree from raw (copied) data.
+Example:
+
+![](./sub-tree-moving-example.gif)
+
+The `raw` data type is added on purpose: to allow multiple nodes creation at a time. I bet it will be useful in many cases
 
 ## Wide strings auto-decoding
 
