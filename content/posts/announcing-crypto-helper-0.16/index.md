@@ -9,7 +9,7 @@ tags = ["rust", "tool", "project", "yew", "crypto-helper"]
 [extra]
 keywords = "Rust, Yew, ASN1, ASN1 parser, ASN1 editor"
 toc = true
-# thumbnail = "dataans-thumbnail.png"
+thumbnail = "ch-16-0-thumbnail.png"
 +++
 
 Visit this tool at [crypto.qkation.com](https://crypto.qkation.com).
@@ -124,7 +124,7 @@ I still decided to keep this feature because it looks fun :satisfied:. If I need
 
 ## Redirect to ASN1
 
-[Add button to redirect output to ans1 page (#95)](https://github.com/TheBestTvarynka/crypto-helper/pull/95). Many thanks [@grok-rs](https://github.com/grok-rs) for his contribution!
+[Add button to redirect output to ans1 page (#95)](https://github.com/TheBestTvarynka/crypto-helper/pull/95). _**Many thanks [@grok-rs](https://github.com/grok-rs) for his contribution!**_
 The idea is simple: redirect to the ASN1 page and try to decode the result of the cryptographic operation as an ASN1 DER structure.
 
 This feature is very useful for me when I want to decrypt and parse the encrypted part of the Kerberos message. For example:
@@ -134,8 +134,8 @@ This feature is very useful for me when I want to decrypt and parse the encrypte
 # Other changes
 
 * More OIDs: [#81](https://github.com/TheBestTvarynka/crypto-helper/pull/81), [#102](https://github.com/TheBestTvarynka/crypto-helper/pull/102).
-* Fix incorrect diff calculation: [#94](https://github.com/TheBestTvarynka/crypto-helper/pull/94). Many thanks [@grok-rs](https://github.com/grok-rs) for his contribution!
-* Allow empty `BitString` decoding: [#93](https://github.com/TheBestTvarynka/crypto-helper/pull/93). Many thanks [@grok-rs](https://github.com/grok-rs) for his contribution!
+* Fix incorrect diff calculation: [#94](https://github.com/TheBestTvarynka/crypto-helper/pull/94). _**Many thanks [@grok-rs](https://github.com/grok-rs) for his contribution!**_
+* Allow empty `BitString` decoding: [#93](https://github.com/TheBestTvarynka/crypto-helper/pull/93). _**Many thanks [@grok-rs](https://github.com/grok-rs) for his contribution!**_
 * CI: add build WASM step: [crypto-helper/commit/814d1675](https://github.com/TheBestTvarynka/crypto-helper/commit/814d16755e95d4f4e69b736c7917d578beb6d881).
 * Update dependencies and refactoring: [#83](https://github.com/TheBestTvarynka/crypto-helper/pull/83), [#87](https://github.com/TheBestTvarynka/crypto-helper/pull/87), [Rust 2024 edition (#101)](https://github.com/TheBestTvarynka/crypto-helper/pull/101), [#106](https://github.com/TheBestTvarynka/crypto-helper/pull/106).
 * `README.md` and typos fixes: [#79](https://github.com/TheBestTvarynka/crypto-helper/pull/79), [#80](https://github.com/TheBestTvarynka/crypto-helper/pull/80), [crypto-helper/commit/15785bfe](https://github.com/TheBestTvarynka/crypto-helper/commit/15785bfecb6d23c7aea0c19f7953af07fa2e08c4), [crypto-helper/commit/dd47d963](https://github.com/TheBestTvarynka/crypto-helper/commit/dd47d963e8f56c3d65e80f4da059db094e474dfb).
