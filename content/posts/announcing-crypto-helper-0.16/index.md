@@ -1,6 +1,6 @@
 +++
 title = "Announcing crypto-helper v.0.16.0"
-date = 2025-12-12
+date = 2025-12-11
 draft = false
 
 [taxonomies]
@@ -94,7 +94,7 @@ Type in the data you want, then submit. Demo:
 ![](./creation-example.gif)
 
 Sometimes you need to create more than one node at a time. For example, when you want to move one sub-tree from one place to another inside the tree.
-The current implementation allows it, but with the help of a small workaround. Still, you can achieve the result by copying the sub-tree, deleting it, and then inserting it in the needed place by creating a new sub-tree from raw (copied) data.
+The current implementation allows it, but with the help of a small workaround. Still, you can achieve the result by copying the sub-tree, deleting it, and then inserting it in the needed place by creating a new sub-tree from raw (hex/base64) data.
 Example:
 
 ![](./sub-tree-moving-example.gif)
