@@ -14,7 +14,7 @@ thumbnail = "ch-16-0-thumbnail.png"
 
 Visit this tool at [crypto.qkation.com](https://crypto.qkation.com).
 
-Short release notes can be found here: `TODO`.
+Short release notes can be found here: [crypto-helper/v.0.16.0](https://github.com/TheBestTvarynka/crypto-helper/releases/tag/v.0.16.0).
 
 # Intro
 
@@ -32,14 +32,15 @@ This post contains a comprehensive list of new changes with additional explanati
 
 ## ASN1 tree editing
 
-[feat(asn1): implement asn1 tree editing (#105)](https://github.com/TheBestTvarynka/crypto-helper/pull/105).
-
 ![](./asn1-tree-editing-pr-stats.png)
+
+[feat(asn1): implement asn1 tree editing (#105)](https://github.com/TheBestTvarynka/crypto-helper/pull/105) + [fix: asn1: create/delete pop-up shake on `ctrl` press](https://github.com/TheBestTvarynka/crypto-helper/pull/108) + [fix(crypto-helper): asn1: remove node pop-up positioning](https://github.com/TheBestTvarynka/crypto-helper/pull/109).
 
 This is the most prominent and most wanted feature of this release.
 
 I always wanted the ability to edit the ASN1 tree. It _just_ feels right. If I can view, then I'm most likely going to edit...
-But for the past few years, I have not had enough time or motivation to implement it. It was just an interesting idea (as many other ideas in my head). But it changed this summer, when I needed [to generate different certificates](https://github.com/Devolutions/sspi-rs/pull/483/commits/46d04e5b1cccf9aa7e9da704ddf063df6e049081#diff-5c9de79f33bbce03789d71e8b4c0fbd409a4bdcb4c746cedfe4cbfc428036ebf) to test information extraction.
+But for the past few years, I have not had enough time and/or motivation to implement it.
+It was just an interesting idea (as many other ideas in my head). But it changed this summer, when I needed [to generate different certificates](https://github.com/Devolutions/sspi-rs/pull/483/commits/46d04e5b1cccf9aa7e9da704ddf063df6e049081#diff-5c9de79f33bbce03789d71e8b4c0fbd409a4bdcb4c746cedfe4cbfc428036ebf) to test information extraction.
 
 It was a nightmare. How can I generate the same cert, but with a few differences, such as extension/enhanced key usage, or alternate subject name properties?
 I did not care if the cert is trusted or about the cert's private key. I only needed certificate files. The task can be summarized as _how to edit the ASN1 tree_: add, change, or remove ASN1 nodes.
@@ -47,19 +48,20 @@ I did not care if the cert is trusted or about the cert's private key. I only ne
 That time I decided to use my [`asn1-parser`](https://github.com/TheBestTvarynka/crypto-helper/tree/main/crates/asn1-parser) crate and _just_ wrote some tests that parse the original certificate, make the necessary changes, and encode it again in base64.
 It wasn't a pleasure to write such tests. After that, I decided to implement ASN1 tree editing no matter what.
 
-After:
+After...
 
     - many hours of designing,
     - a few PoCs,
     - `asn1-parser` complete refactoring,
     - 2.8k lines of code,
+    - ??? hours of development,
     - ...
 
-I finally came up with a working, very cool (IMHO) implementation. It works just as I expected. I am even a bit proud of it.
+I finally came up with a working, very cool (IMHO) implementation. It works just as I wanted. I am even a bit proud of it :smiling_face_with_three_hearts:.
 
 ### User guide
 
-So, how to edit the ASN1 tree? The page looks exactly the same as before ASN1 tree editing was implemented.
+So, how to edit the ASN1 tree? The page looks exactly the same as before ASN1 tree editing was implemented:
 
 ![](./asn1-tree-example.png)
 
@@ -75,7 +77,7 @@ The changes take effect automatically when you type:
 
 ![](./integer-editing.gif)
 
-These editing rules apply to every node you see on the screen.
+These editing rules apply to **every node you see on the screen.**
 
 #### Deletion
 
@@ -92,12 +94,13 @@ Type the data you want and submit. Demo:
 ![](./creation-example.gif)
 
 Sometimes you need to create more than one node at a time. For example, when you want to move one sub-tree from one place to another inside the tree.
-The current implementation does not allow it directly. Still, you can achieve the result by copying the sub-tree, deleting it, and then inserting it in the needed place by creating a new sub-tree from raw (copied) data.
+The current implementation allows it but with the help of small workaround. Still, you can achieve the result by copying the sub-tree, deleting it, and then inserting it in the needed place by creating a new sub-tree from raw (copied) data.
 Example:
 
 ![](./sub-tree-moving-example.gif)
 
 The `raw` data type is added on purpose: to allow multiple node creations at a time. I bet it will be helpful in many cases.
+This technique allows the user to paste any kind of asn1 data at once.
 
 ## Wide strings auto-decoding
 
@@ -142,5 +145,6 @@ This feature is very useful for me when I want to decrypt and parse the encrypte
 
 # References
 
-1. GitHub release.
-2. 
+1. GitHub release: [crypto-helper/v.0.16.0](https://github.com/TheBestTvarynka/crypto-helper/releases/tag/v.0.16.0).
+2. Official website: [crypto.qkation.com](https://crypto.qkation.com).
+3. Source code: [TheBestTvarynka/crypto-helper](https://github.com/TheBestTvarynka/crypto-helper/).
