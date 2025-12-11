@@ -1,6 +1,6 @@
 +++
 title = "Announcing crypto-helper v.0.16.0"
-date = 2025-12-14
+date = 2025-12-12
 draft = false
 
 [taxonomies]
@@ -26,7 +26,7 @@ Note:
 > _Actually, releases are just checkpoints during the `crypto-helper` development and do not mean anything special._
 > _All features and fixes are deployed and available right after merging into the `main` branch._
 
-This post contains a comprehensive list of new changes with additional explanations of how to use the new functionality.
+This post contains a comprehensive list of new changes, along with additional explanations on how to use the new functionality.
 
 # ASN1 major features
 
@@ -42,7 +42,7 @@ I always wanted the ability to edit the ASN1 tree. It _just_ feels right. If I c
 But for the past few years, I have not had enough time and/or motivation to implement it.
 It was just an interesting idea (as many other ideas in my head). But it changed this summer, when I needed [to generate different certificates](https://github.com/Devolutions/sspi-rs/pull/483/commits/46d04e5b1cccf9aa7e9da704ddf063df6e049081#diff-5c9de79f33bbce03789d71e8b4c0fbd409a4bdcb4c746cedfe4cbfc428036ebf) to test information extraction.
 
-It was a nightmare. How can I generate the same cert, but with a few differences, such as extension/enhanced key usage, or alternate subject name properties?
+It was a nightmare. How can I generate the same cert with a few differences, such as extension/enhanced key usage or alternate subject name properties?
 I did not care if the cert is trusted or about the cert's private key. I only needed certificate files. The task can be summarized as _how to edit the ASN1 tree_: add, change, or remove ASN1 nodes.
 
 That time I decided to use my [`asn1-parser`](https://github.com/TheBestTvarynka/crypto-helper/tree/main/crates/asn1-parser) crate and _just_ wrote some tests that parse the original certificate, make the necessary changes, and encode it again in base64.
@@ -89,12 +89,12 @@ To **delete** an ASN1 node, hold `ctrl` and move the cursor to the start of the 
 
 To **create** an ASN1 node, hold `ctrl` and move the cursor between the other two notes where you want to insert a new node. You will see the plus icon.
 Click on it. You will see a pop-up menu. Type the desired node type. The app will automatically select the suitable editor type for the entered node type.
-Type the data you want and submit. Demo:
+Type in the data you want, then submit. Demo:
 
 ![](./creation-example.gif)
 
 Sometimes you need to create more than one node at a time. For example, when you want to move one sub-tree from one place to another inside the tree.
-The current implementation allows it but with the help of small workaround. Still, you can achieve the result by copying the sub-tree, deleting it, and then inserting it in the needed place by creating a new sub-tree from raw (copied) data.
+The current implementation allows it, but with the help of a small workaround. Still, you can achieve the result by copying the sub-tree, deleting it, and then inserting it in the needed place by creating a new sub-tree from raw (copied) data.
 Example:
 
 ![](./sub-tree-moving-example.gif)
@@ -115,7 +115,7 @@ But I forgot that many other buffers can be a valid UTF-16. For example, in the 
 
 ![](./encryption-key-as-wide-string.png)
 
-I still decided to keep this feature because it looks fun :satisfied:. If I need to look at buffer bytes, I can always look at the hex viewer to the right.
+I still decided to keep this feature because it looks fun :satisfied:. If I need to look at buffer bytes, I can always use the hex viewer to the right.
 
 # crypto-helper major features
 
