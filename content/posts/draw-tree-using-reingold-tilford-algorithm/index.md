@@ -142,6 +142,13 @@ I also follow this approach because I got used to this parameter and it's easier
 As I wrote above, `preX` is the initial node `x` coordinate we gave it based on its position among siblings.
 The distance between nodes must be at least NODE_WIDTH + NODES_GAP. Let's call it a <mark>sibling distance</mark>.
 
+For the examples simplicity, I assume that the _sibling distance_ is equal to `1`:
+
+![](./sinling_distance.svg)
+
+<sup><sub>Almost at the end of writing this article, I realized it would be easier to set sibling distance to 2.
+But I did not want to recalculate all numbers, so I left it as it is.</sup></sub>
+
 For every node we set the `preX` to one of the following values:
 
 - If the node is the leftmost node among siblings, then its `preX` is equal to midpoint of its children:
@@ -158,7 +165,7 @@ For every node we set the `preX` to one of the following values:
 
 > **_Wait!!! What? `.shift`? Here? Why?_**
 
-Camp down! :innocent:
+Calm down! :innocent:
 
 Yes, `shift`. Do you remember the `shift` definition?
 
@@ -221,7 +228,7 @@ All purple nodes are called the <mark>right contour</mark> and all orange nodes 
 
 We do shift calculation for each not-leftmost node in the tree.
 
-**Important moment.** Pay attention, that we compare the leftmost and rightmost nodes *on each level*.
+**Important moment #1.** Pay attention, that we compare the leftmost and rightmost nodes *on each level*.
 It does not mean that it's enough, for example, for left contour to _just_ take leftmost child of the leftmost sibling and so on.
 Look at the picture below:
 
@@ -231,14 +238,22 @@ Path to some leftmost/rightmost nodes can lead through intermediate nodes. You n
 Unfortunately, I forgot about that and my implementation is incomplete.
 I remembered about it only while writing this post :sweat_smile:. And that's another reason to write :nerd_face:.
 
+**Important moment #2.** Do not forget to apply `mod` and `shift` values to child nodes during shift calculation.
+
 ### Example
 
-For the example simplicity, I assume that the _sibling distance_ is equal to `1`:
-
-![](./sinling_distance.svg)
-
 Do you remember the big tree from the beginning of the post?
+Let's calculate the `preX`, `mod`, and `shift` values for each node.
 
+![](./tree-final-x.png)
+
+I added verbose explanations on purpose.
+The good, verbose, and comprehensive example was exactly what I wanted when I first encountered this algorithm.
+
+Did you notice that the node11 is not exactly between node10 and node15?
+That's what I told you at the beginning of the article: I did not care about distances between siblings.
+The only thing that matters to me is parent-children alignment.
+But if you want to fix that and get even more :sparkles:aesthetic:sparkles: tree, you can improve the math behind shift calculation.
 
 ## Second walk
 
@@ -260,6 +275,7 @@ The best part is we do not even need to create separate arrays/lists to track pa
 ```ts
 // Pseudocode.
 function secondWalk(node, shift, level) {
+    // `shift` - sum of all parent nodes mod and shift values.
     for (const child in node.getChildNodes()) {
         secondWalk(child, shift + node.mod + node.shift, level + 1);
     }
