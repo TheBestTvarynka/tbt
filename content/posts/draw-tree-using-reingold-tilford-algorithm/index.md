@@ -29,7 +29,7 @@ Additionally, I periodically back up genealogy data to an external SSD and [Goog
 I do not know about you, but I feel pretty comfortable and reliable with this approach.
 
 Let me answer one question before we go further. Yes, I know about [myheritage](https://www.myheritage.com/).
-I still fill up all family and ancestors' basic info like names, birth, marriage, and death dates, etc.
+I still fill in all the basic info for my family and ancestors, like names, birth, marriage, and death dates.
 I consider MyHeritage a great tool for research.
 But again, I do not trust it, and I do not want to entrust it with all my family's personal photos, stories, some documents, and other sensitive information.
 
@@ -217,7 +217,7 @@ If the current node is not the leftmost node among its siblings, then there is a
 We need to check for overlaps and increase the `shift` value if needed.
 
 For every sibling's sub-tree to the left, we do the following: we compare `x` coordinates of the rightmost node of the left sub-tree and leftmost node of the right sub-tree (current node sub-tree) on each level.
-If we detect that nodes overlap, we calculate how much we need to shift the right sub-tree. We do that on each level and, as the result, we take the maximum `shift` value. See the example:
+If we detect that nodes overlap, we calculate how much we need to shift the right sub-tree. We do that on each level and, as a result, we take the maximum `shift` value. See the example:
 
 ![](./shift-example.png)
 
