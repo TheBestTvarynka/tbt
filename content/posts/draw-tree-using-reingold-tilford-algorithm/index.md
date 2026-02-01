@@ -1,7 +1,7 @@
 
 +++
 title = "Drawing Genealogy Graphs. Part 1: Tree Drawing Using Reingold-Tilford Algorithm"
-date = 2026-02-05
+date = 2026-02-02
 draft = false
 
 [taxonomies]
@@ -10,8 +10,6 @@ tags = ["algorithms", "tree-data-structure", "data-structures", "typescript", "d
 [extra]
 keywords = "Algorithm, Reingold-Tilford Algorithm, Trees, Node positioning, Data structures, Algorithms"
 toc = true
-math = true
-math_auto_render = true
 +++
 
 # Motivation
@@ -270,6 +268,10 @@ const shift = /* the sum of parent nodes mod and shift parameters */;
 const x = node.preX + node.shift + shift;
 ```
 
+For example, the final `x` coordinate for node13 is a sum of mod + shift values of nodes22,16,15 and its own x + shift values:
+
+![](./tree-final-node13.png)
+
 The best part is we do not even need to create separate arrays/lists to track parent nodes. We can calculate this sum recursively:
 
 ```ts
@@ -290,16 +292,21 @@ function secondWalk(node, shift, level) {
 secondWalk(root, 0, 0);
 ```
 
+Let's apply this to our example and see what we will get:
+
+![](./tree-final.png)
+
 # Demo: Grafily
 
 I hope the reader does not forget that my primary goal is family graph rendering.
 Obviously, we cannot render all family members but **only direct ancestors**: parents, parents of parents, etc.
 
 I adjusted the Reingold-Tilford Algorithm to family tree rendering and implemented it in [github/TheBestTvarynka/grafily/b9d281d3/src/layout.ts](https://github.com/TheBestTvarynka/grafily/blob/b9d281d35fe5def9a3b0b260c82375d44f4755b1/src/layout.ts).
-The whole implementation tool me ~500 LoC.
+The whole implementation took me ~500 LoC.
 This implementation is far from perfection and code can be cleaned a lot.
 But I do not need any perfectionism here and I know that I will rewrite it soon.
-And this is the example of this algorithm in action:
+
+This is the example of the Reingold-Tilford algorithm in action:
 
 ![](./demo.jpg)
 
