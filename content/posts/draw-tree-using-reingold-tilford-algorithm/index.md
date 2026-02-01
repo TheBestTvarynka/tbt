@@ -71,7 +71,7 @@ Different implementations set similar (maybe a bit different) _Aesthetic Rules_ 
 1. Nodes at the same level of the tree should be on the same horizontal line.
 2. A parent should be centered over its children.
 3. A tree and its mirror image should produce drawings that are reflections of one another;
-   moreover, a subtree should be drawn the same way regardless of where it occurs in the tree.
+   moreover, a sub-tree should be drawn the same way regardless of where it occurs in the tree.
 
 **Note 1.** Someone also require the distance between children of the node should be the same, but it's not the case for me.
 I do not care about this distance :upside_down_face:.
@@ -106,7 +106,7 @@ Let me clarify a few things.
 - <mark>Siblings</mark> are all nodes that share the same parent node.
   I do not often see someone use this term, so I decided to clarify it.
 - <mark>Sub-tree</mark> of the node is all descendants including the node itself.
-  For example, subtree for node 10 is a tree of nodes 10, 7, 8, 9. 
+  For example, sub-tree for node 10 is a tree of nodes 10, 7, 8, 9. 
 - The Reingold-Tilford Algorithm uses a [depth-first tree traversal](https://en.wikipedia.org/wiki/Depth-first_search).
   On the picture above, you can see in what order coordinates will be assigned.
   It is important to have determined siblings order.
@@ -122,14 +122,14 @@ Let me explain what these parameters mean.
 
 - `preX` or <mark>preliminary x</mark>.
   The initial node `x` coordinate we gave it based on its position among siblings.
-  This `preX` value does not take into account siblings sub-trees or children subtrees.
+  This `preX` value does not take into account siblings sub-trees or children sub-trees.
 - `mod` or <mark>modifier</mark>.
   Denotes how much we need to shift node descendants (**but not the node itself**) to the right to make descendants centered with respect to the node.
 
 ![](./mod.png)
 
 - `shift` or <mark>shift</mark> :rofl:.
-  Denotes how much we need to shift the node **and** its descendants to the right to avoid overlapping with the previous sibling subtree.
+  Denotes how much we need to shift the node **and** its descendants to the right to avoid overlapping with the previous sibling sub-tree.
 
 ![](./shift.png)
 
@@ -140,10 +140,7 @@ I also follow this approach because I got used to this parameter and it's easier
 ### Preliminary x
 
 As I wrote above, `preX` is the initial node `x` coordinate we gave it based on its position among siblings.
-The distance between nodes must be at least NODE_WIDTH + NODES_GAP. Let's call it a _sibling distance_.
-For the example simplicity, I assume that the _sibling distance_ is equal to 1:
-
-![](./sinling_distance.svg)
+The distance between nodes must be at least NODE_WIDTH + NODES_GAP. Let's call it a <mark>sibling distance</mark>.
 
 For every node we set the `preX` to one of the following values:
 
@@ -165,7 +162,7 @@ Camp down! :innocent:
 
 Yes, `shift`. Do you remember the `shift` definition?
 
-> _Denotes how much we need to shift the **node and its descendants** to the right to avoid overlapping with the previous sibling subtree._
+> _Denotes how much we need to shift the **node and its descendants** to the right to avoid overlapping with the previous sibling sub-tree._
 
 The `shift` value also affects the node `x` value.
 We need to take it into an account when calculating `preX`.
@@ -192,12 +189,56 @@ const midpoint = (leftmostX + rightmostX) / 2;
 const mod = node.preX - midpoint;
 ```
 
+Here is an example, how it will look on a real tree:
+
+![](./mod-example.png)
+
+Do not think about child shift value
+
 Good. Now all children are centered with respect to their parent node.
 Obviously, that's not enough.
-All previous manipulations do not prevent overlaps. We do not want subtrees to overlap.
+All previous manipulations do not prevent overlaps. We do not want sub-trees to overlap.
 We are going to fix it using the `shift` parameter.
 
 ### Shift
+
+The `mod` parameter is responsible for parent-children alignment.
+Whereas the `shift` parameter is responsible for eliminating overlaps.
+
+If current node is the leftmost node among its siblings, then its `shift` value is 0.
+It's pointless to search for overlaps because there is no sub-trees to the left (in the scope of sibling sub-trees, of course).
+
+If the current node is not the leftmost node among its siblings, then there is a possibility that its sub-tree overlaps with one of the sub-trees of siblings to the left.
+We need to check for overlaps and increase the `shift` value if needed.
+
+For every sibling's sub-tree to the left, we do the following: we compare `x` coordinates of the rightmost node of the left sub-tree and leftmost node of the right sub-tree (current node sub-tree) on each level.
+If we detect that nodes overlap, we calculate how much we need to shift the right sub-tree. We do that on each level and, as the result, we take the maximum `shift` value. See the example:
+
+![](./shift-example.png)
+
+I highlighted rightmost nodes of the left sub-tree with purple and leftmost nodes of the current sub-tree with orange.
+All purple nodes are called the <mark>right contour</mark> and all orange nodes are called <mark>left contour</mark>.
+
+We do shift calculation for each not-leftmost node in the tree.
+
+**Important moment.** Pay attention, that we compare the leftmost and rightmost nodes *on each level*.
+It does not mean that it's enough, for example, for left contour to _just_ take leftmost child of the leftmost sibling and so on.
+Look at the picture below:
+
+![](./contour.png)
+
+Path to some leftmost/rightmost nodes can lead through intermediate nodes. You need to take it into account when implementing the algorithm.
+Unfortunately, I forgot about that and my implementation is incomplete.
+I remembered about it only while writing this post :sweat_smile:. And that's another reason to write :nerd_face:.
+
+### Example
+
+For the example simplicity, I assume that the _sibling distance_ is equal to `1`:
+
+![](./sinling_distance.svg)
+
+Do you remember the big tree from the beginning of the post?
+
 
 ## Second walk
 
