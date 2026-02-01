@@ -125,8 +125,13 @@ Let me explain what these parameters mean.
   This `preX` value does not take into account siblings sub-trees or children subtrees.
 - `mod` or <mark>modifier</mark>.
   Denotes how much we need to shift node descendants (**but not the node itself**) to the right to make descendants centered with respect to the node.
+
+![](./mod.png)
+
 - `shift` or <mark>shift</mark> :rofl:.
   Denotes how much we need to shift the node **and** its descendants to the right to avoid overlapping with the previous sibling subtree.
+
+![](./shift.png)
 
 Worth mentioning that the original paper does not have the `shift` parameter, only `preX` and `mod`.
 The `shift` parameter was introduced in this post _for better clarity_: [Reingold Tilford Algorithm Explained With Walkthrough. Sep 12, 2023](https://towardsdatascience.com/reingold-tilford-algorithm-explained-with-walkthrough-be5810e8ed93/).
@@ -135,16 +140,18 @@ I also follow this approach because I got used to this parameter and it's easier
 ### Preliminary x
 
 As I wrote above, `preX` is the initial node `x` coordinate we gave it based on its position among siblings.
-The distance between nodes must be at least NODE_WIDTH + NODEs_GAP. Let's call it a _sibling distance_.
+The distance between nodes must be at least NODE_WIDTH + NODES_GAP. Let's call it a _sibling distance_.
 For the example simplicity, I assume that the _sibling distance_ is equal to 1:
 
 ![](./sinling_distance.svg)
 
-For every node we set the `preX` to on of the following values:
+For every node we set the `preX` to one of the following values:
 
-- If the node is the leftmost node among siblings, then its `preX` is equal to midpoint of its children `preX` values:
+- If the node is the leftmost node among siblings, then its `preX` is equal to midpoint of its children:
   ```ts
-  const preX = (leftmostChild.preX + rightmostChild.preX) / 2;
+  const leftmostX = leftmostNode.preX + leftmostNode.shift;
+  const rightmostX = rightmostNode.preX + rightmostNode.shift;
+  const midpoint = (leftmostX + rightmostX) / 2;
   ```
   If the node does not have children but is the leftmost sibling, then it's `prex` is equal to `0`.
 - If the node is **not** the leftmost node among siblings, then its `preX` is equal to previous sibling `preX` plus sibling distance.
@@ -152,28 +159,45 @@ For every node we set the `preX` to on of the following values:
   const preX = prevSibling.preX + SIBLING_DISTANCE;
   ```
 
-I noted on the picture below `preX` values for every node in our tree:
+> **_Wait!!! What? `.shift`? Here? Why?_**
 
-![](./tree-prex.png)
+Camp down! :innocent:
 
-`preX` for nodes 1, 7, 12, 17 is equal to 0. Because these nodes are leftmost nodes and do not have children.
-For nodes 3, 10, 19, 6, 22, `preX` value is the midpoint between its rightmost and leftmost siblings.
-For all other nodes, the `preX` value is equal to previous sibling `preX` + sibling distance `1`. Final result:
+Yes, `shift`. Do you remember the `shift` definition?
 
-![](./tree-prex-final.png)
+> _Denotes how much we need to shift the **node and its descendants** to the right to avoid overlapping with the previous sibling subtree._
+
+The `shift` value also affects the node `x` value.
+We need to take it into an account when calculating `preX`.
+But we do not use the children's `mod` value because it does not affect the children `x` value (only children's descendants).
+
+Yes, you do not know how the `shift` is calculated, but I assure you, I will explain it below.
+As I said above, the Reingold-Tilford algorithm is the deep-first recursive algorithm.
+It means that when we calculate node `preX`, `mod`, and `shift` values, these values **are already calculated for all children nodes**.
 
 ### Modifier
 
-At this point, only children of all leftmost siblings are centered with respect to their parent node.
-We need to do the same for all other nodes.
 At this step, our goal is to center children with respect to their parent node.
+Currently, only children of leftmost siblings are centered with respect to their parent node.
+We need to do the same for all other nodes.
 
 For every node we calculate the `mod` value: the distance between children midpoint and `preX`.
-Or, in other words, how much we need to shift descendants to the right, so they are centered with respect to their parent node. General formula looks like this:
+Or, in other words, how much we need to shift descendants to the right, so they are centered with respect to their parent node.
+General formula looks like this:
 
 ```ts
-const mod = 
+const leftmostX = leftmostNode.preX + leftmostNode.shift;
+const rightmostX = rightmostNode.preX + rightmostNode.shift;
+const midpoint = (leftmostX + rightmostX) / 2;
+const mod = node.preX - midpoint;
 ```
+
+Good. Now all children are centered with respect to their parent node.
+Obviously, that's not enough.
+All previous manipulations do not prevent overlaps. We do not want subtrees to overlap.
+We are going to fix it using the `shift` parameter.
+
+### Shift
 
 ## Second walk
 
