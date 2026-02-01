@@ -1,4 +1,3 @@
-
 +++
 title = "Drawing Genealogy Graphs. Part 1: Tree Drawing Using Reingold-Tilford Algorithm"
 date = 2026-02-02
@@ -8,8 +7,9 @@ draft = false
 tags = ["algorithms", "tree-data-structure", "data-structures", "typescript", "drawing-genealogy-graphs-series"]
 
 [extra]
-keywords = "Algorithm, Reingold-Tilford Algorithm, Trees, Node positioning, Data structures, Algorithms"
+keywords = "Algorithm, Reingold-Tilford Algorithm, Trees, Node positioning, Data structures, Algorithms, Depth-first search"
 toc = true
+thumbnail = "dgg1-thumbnail.png"
 +++
 
 # Motivation
@@ -369,3 +369,4 @@ But in the end, I managed to get it done and even a bit proud of myself.
 5. My Reingold-Tilford Algorithm implementation: [github/TheBestTvarynka/grafily/b9d281d3/src/layout.ts](https://github.com/TheBestTvarynka/grafily/blob/b9d281d35fe5def9a3b0b260c82375d44f4755b1/src/layout.ts).
 6. [Obsidian](https://obsidian.md/) official website.
 7. [myheritage](https://www.myheritage.com/) official website.
+8. [tldraw](https://github.com/tldraw/tldraw) GitHub repository.
