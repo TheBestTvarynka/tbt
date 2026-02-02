@@ -217,7 +217,27 @@ If the current node is not the leftmost node among its siblings, then there is a
 We need to check for overlaps and increase the `shift` value if needed.
 
 For every sibling's sub-tree to the left, we do the following: we compare `x` coordinates of the rightmost node of the left sub-tree and leftmost node of the right sub-tree (current node sub-tree) on each level.
-If we detect that nodes overlap, we calculate how much we need to shift the right sub-tree. We do that on each level and, as a result, we take the maximum `shift` value. See the example:
+If we detect that nodes overlap, we calculate how much we need to shift the right sub-tree. We do that on each level and, as a result, we take the maximum `shift` value. The shift calculation algorithm is pretty simple:
+
+```ts
+// Pseudocode.
+// leftNode - rightmost node from the left sub-tree.
+// rightNode - leftmost node from the current (right) sub-tree.
+// leftShift - the sum of parents' mod and shift parameters for leftNode.
+// rightShift - the sum of parents' mod and shift parameters for rightNode.
+
+const leftX = leftNode.preX + leftShift + leftNode.shift + NODE_WIDTH;
+const rightX = rightNode.preX + rightShift + rightNode.shift;
+
+let shift = 0;
+// If the distance between sub-trees is not big enough.
+if (rightX - leftX < NODES_GAP) {
+    // Calculate needed shift.
+    shift = NODES_GAP - (rightX - leftX);
+}
+```
+
+See the example:
 
 ![](./shift-example.png)
 
