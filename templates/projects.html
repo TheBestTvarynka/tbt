@@ -1,0 +1,37 @@
+{# This Page Shows the Posts Grouped by Year: example.com/posts/ #}
+
+{% extends "base.html" %}
+{%- set uglyurls = config.extra.uglyurls | default(value=false) -%}
+{%- if config.extra.search_library %}{%- if config.extra.search_library == "offline" %}{% set uglyurls = true %}{% endif %}{% endif %}
+
+{%- block seo %}
+  {{- super() }}
+  {%- set title = "Archive" %}
+
+  {%- if config.title %}
+    {%- set title_addition = title_separator ~ config.title %}
+  {%- else %}
+    {%- set title_addition = "" %}
+  {%- endif %}
+
+  {%- set description = config.description %}
+
+  {{- macros_seo::seo(config=config, title=title, title_addition=title_addition, description=description, is_home=true) }}
+{%- endblock seo %}
+
+{%- block content %}
+
+<ul>
+  {% for project in section.pages %}
+    <li>
+      <div style="display: flex;flex-direction: column;">
+        <spn>
+          <a href="{{ project.permalink | safe }}">{{ project.title }}</a> - <time datetime="{{ project.date }}">{{ project.date | date(format="%F") }}</time>
+        </spn>
+        <span>{{ project.description }}</span>
+      </div>
+    </li>
+  {% endfor %}
+</ul>
+
+{%- endblock content %}

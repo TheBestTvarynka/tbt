@@ -5,6 +5,7 @@ path = "privacy"
 template = "pages.html"
 title = "Privacy Policy"
 +++
+
 ## Privacy
 
 - This site does not set or use cookies.
