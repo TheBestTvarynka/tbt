@@ -3,6 +3,7 @@ title = "crypto-helper"
 description = "Web app that can hash/encrypt/sign the data. JWT debugger."
 date = 2024-08-24
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["yew", "rust", "tools", "project", "crypto-helper"]

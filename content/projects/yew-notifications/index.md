@@ -3,6 +3,7 @@ title = "yew-notifications"
 description = "Notifications components library for Yew. It's like react-toastify but for Yew."
 date = 2023-04-17
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["yew", "rust"]
