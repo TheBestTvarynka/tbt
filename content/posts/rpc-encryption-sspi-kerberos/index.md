@@ -2,6 +2,7 @@
 title = "Implementing Kerberos RPC encryption over SSPI"
 date = 2025-04-05
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["kerberos", "rpc", "sspi", "rust", "cryptography"]

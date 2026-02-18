@@ -2,6 +2,7 @@
 title = "Rust Clap recipes"
 date = 2023-06-15
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["clap", "recipes", "rust"]

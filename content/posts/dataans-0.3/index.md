@@ -2,6 +2,7 @@
 title = "Announcing Dataans v.0.3.0"
 date = 2025-08-03
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["rust", "tool", "project", "tauri", "leptos", "dataans"]

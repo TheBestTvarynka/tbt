@@ -2,6 +2,7 @@
 title = "Debugging with API Monitor"
 date = 2023-07-28
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["debugging", "api-monitor", "rust", "windows"]

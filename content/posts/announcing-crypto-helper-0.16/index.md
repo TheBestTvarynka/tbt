@@ -2,6 +2,7 @@
 title = "Announcing crypto-helper v.0.16.0"
 date = 2025-12-11
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["rust", "tool", "project", "yew", "crypto-helper"]

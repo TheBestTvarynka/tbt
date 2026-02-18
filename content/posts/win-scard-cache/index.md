@@ -2,6 +2,7 @@
 title = "Windows smart card cache"
 date = 2024-04-04
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["debugging", "windows", "rust", "scard"]

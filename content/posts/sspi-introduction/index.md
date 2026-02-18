@@ -2,6 +2,7 @@
 title = "SSPI introduction"
 date = 2023-04-27
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["sspi", "windows", "winapi", "rust"]

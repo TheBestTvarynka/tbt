@@ -2,6 +2,7 @@
 title = "Git recipes"
 date = 2024-06-22
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["recipes", "git"]

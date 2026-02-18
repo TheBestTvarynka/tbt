@@ -2,6 +2,7 @@
 title = "Smart card container name"
 date = 2024-04-22
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["debugging", "windows", "scard"]

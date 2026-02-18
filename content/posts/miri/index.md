@@ -2,6 +2,7 @@
 title = "Writing unsafe Rust code? Please, consider Miri"
 date = 2024-06-30
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["rust", "tool"]

@@ -2,6 +2,7 @@
 title = "Drawing Genealogy Graphs. Part 1: Tree Drawing Using Reingold-Tilford Algorithm"
 date = 2026-02-02
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["algorithms", "tree-data-structure", "data-structures", "typescript", "drawing-genealogy-graphs-series"]

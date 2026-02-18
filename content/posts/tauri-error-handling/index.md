@@ -2,6 +2,7 @@
 title = "Tauri error handling recipes"
 date = 2024-12-26
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["recipes", "rust", "tauri", "leptos"]
