@@ -21,24 +21,24 @@
   $ic: true,// true for colorized icons, otherwise #888 is used.
 
   $icon-rss: true,
-  $icon-mail: false,// e-mail
+  $icon-mail: true,// e-mail
   $icon-mastodon: false,
   $icon-element: false,
   $icon-matrix: false,
   $icon-buymeacoffee: false,
   $icon-kofi: false,
-  $icon-twitter: false,
+  $icon-twitter: true,
   $icon-facebook: false,
-  $icon-linkedin: false,
+  $icon-linkedin: true,
   $icon-codeberg: false,
-  $icon-gitlab: false,
-  $icon-github: false,
+  $icon-gitlab: true,
+  $icon-github: true,
   $icon-github-sponsor: false,
   $icon-bitbucket: false,
   $icon-python: false,
   $icon-docker: false,
   $icon-stack: false,
-  $icon-instagram: false,
+  $icon-instagram: true,
   $icon-pixelfed: false,
   $icon-pinterest: false,
   $icon-discord: false,
@@ -46,7 +46,7 @@
   $icon-youtube: false,
   $icon-peertube: false,
   $icon-researchgate: false,
-  $icon-telegram: false,
+  $icon-telegram: true,
 
   //$icon-x: true,// x symbol, used to close search results page.
   //$icon-search: true,//search, spyglass search button in search box.

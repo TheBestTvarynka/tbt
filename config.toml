@@ -151,7 +151,7 @@ instagram = "thebesttvarynka"
 # youtube = "channel/your-channel-id"
 #peertube = "https://peertube.example.com/@username"
 #researchgate = "your-profile-id"
-#telegram = "your-user-name"
+telegram = "tbtpm"
 
 mail_encode = true # This obfuscates your email address, javascript is used to decode it at page load.
 

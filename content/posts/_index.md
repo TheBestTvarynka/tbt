@@ -1,5 +1,5 @@
 +++
 title = "Posts"
-template = "archive.html"
+template = "posts.html"
 sort_by = "date"
 +++
