@@ -6,7 +6,7 @@
 
 {%- block seo %}
   {{- super() }}
-  {%- set title = "Archive" %}
+  {%- set title = "Home" %}
 
   {%- if config.title %}
     {%- set title_addition = title_separator ~ config.title %}
@@ -18,3 +18,7 @@
 
   {{- macros_seo::seo(config=config, title=title, title_addition=title_addition, description=description, is_home=true) }}
 {%- endblock seo %}
+
+{%- block content %}
+  <span>Pages will be here.</span>
+{%- endblock content %}

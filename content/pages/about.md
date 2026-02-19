@@ -5,6 +5,8 @@ template = "pages.html"
 draft = false
 +++
 
+[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://stand-with-ukraine.pp.ua/)
+
 # Hi there :wave:
 
 I am Pavlo Myroniuk :man_technologist:, a software developer from Ukraine :ukraine:. Loves Rust :crab: and open-source software.
