@@ -3,6 +3,7 @@ title = "SSPI introduction"
 date = 2023-04-27
 draft = false
 template = "post.html"
+description = "An introduction guide about the Windows SSPI API, its core principles, and how to work with it."
 
 [taxonomies]
 tags = ["sspi", "windows", "winapi", "rust"]

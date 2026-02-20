@@ -3,6 +3,7 @@ title = "Announcing crypto-helper v.0.16.0"
 date = 2025-12-11
 draft = false
 template = "post.html"
+description = "A new [crypto-helper](https://crypto.qkation.com/) release with a ton of new cool features like ASN1 tree editing, HMAC-SHA support, wide strings auto-deciding, and more"
 
 [taxonomies]
 tags = ["rust", "tool", "project", "yew", "crypto-helper"]

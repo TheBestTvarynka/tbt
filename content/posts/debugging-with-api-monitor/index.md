@@ -3,6 +3,7 @@ title = "Debugging with API Monitor"
 date = 2023-07-28
 draft = false
 template = "post.html"
+description = "The [API Monitor](http://www.rohitab.com/apimonitor) speaks for itself. It's a great tool for the system API calls debugging, monitoring, information extraction, exploring. This post shows how to extend API Monitor APIs collection and add your custom one."
 
 [taxonomies]
 tags = ["debugging", "api-monitor", "rust", "windows"]
@@ -14,7 +15,7 @@ toc = true
 thumbnail = "debugging-with-api-monitor-thumbnail.png"
 +++
 
-The [API monitor](http://www.rohitab.com/apimonitor) speaks for itself. It's a great tool for the system API calls debugging, monitoring, information extraction, exploring. Especially in cases when you don't know how exactly API works.
+The [API Monitor](http://www.rohitab.com/apimonitor) speaks for itself. It's a great tool for the system API calls debugging, monitoring, information extraction, exploring. Especially in cases when you don't know how exactly API works.
 
 **Disclaimer**. (If you don't get it yet). Mentioned API Monitor is a tool for monitoring the system API calls. So, I you are back/front-end dude which is not interested in such stuff, this article will not be useful for you.
 

@@ -3,6 +3,7 @@ title = "Implementing Kerberos RPC encryption over SSPI"
 date = 2025-04-05
 draft = false
 template = "post.html"
+description = "A deep dive into how Kerberos RPC encryption works and how it is related to SSPI. By the end of the article, we will implement custom encryptor/decryptor."
 
 [taxonomies]
 tags = ["kerberos", "rpc", "sspi", "rust", "cryptography"]

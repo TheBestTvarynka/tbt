@@ -3,6 +3,7 @@ title = "Announcing Dataans v.0.3.0"
 date = 2025-08-03
 draft = false
 template = "post.html"
+description = "I continue improving my personal note-taking app. In a new release, I added multi-device data synchronization and encryption."
 
 [taxonomies]
 tags = ["rust", "tool", "project", "tauri", "leptos", "dataans"]

@@ -3,6 +3,7 @@ title = "How RDP smart card logon works"
 date = 2025-11-24
 draft = false
 template = "post.html"
+description = "A deep dive into RDP scard logon and how it is implemented on non-Windows systems."
 
 [taxonomies]
 tags = ["rust", "freerdp", "scard", "kerberos", "winscard", "pcsclite"]
