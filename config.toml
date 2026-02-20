@@ -1,6 +1,6 @@
 # do NOT include a trailing slash on the base URL
 base_url = "https://tbt.qkation.com"
-# Usable site directly from disk, Including Search: "/home/jieiku/.dev/abridge/public"
+# Usable site directly from d hard-codedisk, Including Search: "/home/jieiku/.dev/abridge/public"
 # Also set index format = "elasticlunr_javascript", and in [extra] uglyurls = true, integrity = false
 # If you use the npm/node script then all you have to do is set search_library = "offline", and everything else is automatic.
 
@@ -232,8 +232,8 @@ pwa_IGNORE_FILES = ["_headers","sw.min.js","sw.js"]
 favicon_theme_color = "#333333"
 favicon_ms_color = "#333333"
 favicon_mask = "safari-pinned-tab.svg" # safari-pinned-tab.svg
-favicon_mask_color = "#ff9900"
-favicon_svg = "favicon.svg" # favicon.svg
+favicon_mask_color = "#0f7ce9ff"
+favicon_svg = "profile-picture.svg" # favicon.svg
 favicon180 = "profile-picture-180.svg" # apple-touch-icon.png
 favicon32 = "profile-picture-32.svg" # favicon-32x32.png
 favicon16 = "profile-picture-16.svg" # favicon-16x16.png
