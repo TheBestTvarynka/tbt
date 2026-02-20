@@ -31,10 +31,8 @@ This Template can also be used directly for the index eg: example.com/ or as the
 {%- endblock seo %}
 
 {%- block content %}
-    {%- set section = get_section(path="posts/_index.md") -%}
-    {%- set pages_to_display = section.pages %}
     <div>
-    {%- for page in pages_to_display %}
+    {%- for page in paginator.pages %}
       <article>
         {{- macros::title_index(page=page, config=config) }}
         {%- if config.extra.meta_index.position %}
