@@ -2,6 +2,8 @@
 title = "Writing unsafe Rust code? Please, consider Miri"
 date = 2024-06-30
 draft = false
+template = "post.html"
+description = "[Miri](https://github.com/rust-lang/miri) is a powerful tool ensure your `unsafe` Rust code is sound. Learn more about Miri usage, benefits, and limitations."
 
 [taxonomies]
 tags = ["rust", "tool"]

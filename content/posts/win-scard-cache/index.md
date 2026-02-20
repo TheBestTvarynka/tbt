@@ -2,6 +2,8 @@
 title = "Windows smart card cache"
 date = 2024-04-04
 draft = false
+template = "post.html"
+description = "A few months ago I had a great opportunity to implement [the smart card emulation](https://github.com/Devolutions/sspi-rs/pull/210). Windows [WinSCard](https://learn.microsoft.com/en-us/windows/win32/api/winscard/) cache items are a critical part of scard logon and must work properly for scard logon to succeeded. I reversed some WinSCard cache items layout and described them in this post."
 
 [taxonomies]
 tags = ["debugging", "windows", "rust", "scard"]

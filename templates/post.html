@@ -1,0 +1,23 @@
+{# This Template Shows the Individual Blog Posts#}
+
+{% extends "page.html" %}
+
+{% block content %}
+    {{ super() }}
+
+    {%- if page.extra.mermaid %}
+        <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+        <script>mermaid.initialize({startOnLoad:true});</script>
+    {%- endif %}
+{% endblock %}
+
+{%- block comments_body %}
+    <script src="https://utteranc.es/client.js"
+        repo="TheBestTvarynka/tbt"
+        issue-term="title"
+        label="comments"
+        theme="preferred-color-scheme"
+        crossorigin="anonymous"
+        async>
+    </script>
+{%- endblock comments_body %}

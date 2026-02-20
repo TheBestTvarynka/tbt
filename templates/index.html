@@ -1,4 +1,12 @@
+{#
+This Template Shows a paginated page of the Posts of a section with a short summary.
+This Template can also be used directly for the index eg: example.com/ or as the rendering template for Sections, eg: example.com/blog/  example.com/software/
+#}
+
 {%- extends "base.html" %}
+{%- set uglyurls = config.extra.uglyurls | default(value=false) -%}
+{%- if config.extra.search_library %}{%- if config.extra.search_library == "offline" %}{% set uglyurls = true %}{% endif %}{% endif %}
+
 
 {%- block seo %}
   {{- super() }}
@@ -19,14 +27,12 @@
 
   {%- set description = config.description %}
 
-  {{- macros_head::seo(config=config, title=title, title_addition=title_addition, description=description, is_home=true) }}
+  {{- macros_seo::seo(config=config, title=title, title_addition=title_addition, description=description, is_home=true) }}
 {%- endblock seo %}
 
 {%- block content %}
     <div>
-      <h1>Posts</h1>
-    {%- set sm = get_section(path="posts/_index.md") %}
-    {%- for page in sm.pages %}
+    {%- for page in paginator.pages %}
       <article>
         {{- macros::title_index(page=page, config=config) }}
         {%- if config.extra.meta_index.position %}
@@ -38,12 +44,15 @@
         {%- if page.summary %}
           {{ page.summary | markdown(inline=true) | safe }}
         {%- elif page.description %}
-          {{ page.description | safe }}
+          {{ page.description | markdown(inline=true) | safe }}
         {%- elif page.content %}
-          {{ page.content | striptags | truncate(length=150) | safe }}
+          {{ page.content | striptags | truncate(length=150) | markdown(inline=true) | safe }}
         {%- elif page.extra.static_thumbnail %}
         {%- endif %}
-          <a href="{{ page.permalink | safe }}{%- if config.extra.uglyurls %}index.html{%- endif %}">...more</a>
+          <a href="{{ page.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">
+            ...{{ macros::translate(key="more", default="more", i18n=i18n) }}
+          </a>
+        </p>
         </div>
         {%- if config.extra.meta_index.position %}
         {%- if config.extra.meta_index.position == "bottom" or config.extra.meta_index.position == "both" %}
@@ -52,45 +61,37 @@
         {%- endif %}
       </article>
     {%- endfor %}
+    {%- if config.extra.arrow_pagination %}
     {{- macros::pagination(paginator=paginator, config=config) }}
-      <br>
-      <hr>
-      <h1>Projects</h1>
-    {%- set pm = get_section(path="projects/_index.md") %}
-    {%- for project in pm.pages %}
-      <article>
-        {{- macros::title_index(page=project, config=config) }}
-        {%- if config.extra.meta_index.position %}
-        {%- if config.extra.meta_index.position == "top" or config.extra.meta_index.position == "both" %}
-        {{- macros::meta_index(page=project, config=config) }}
-        {%- endif %}{%- endif %}
-        <div class="sum">
-        <p>
-        {%- if project.summary %}
-          {{ project.summary | markdown(inline=true) | safe }}
-        {%- elif project.description %}
-          {{ project.description | safe }}
-        {%- elif project.content %}
-          {{ project.content | striptags | truncate(length=150) | safe }}
-        {%- elif project.extra.static_thumbnail %}
-        {%- endif %}
-          <a href="{{ project.permalink | safe }}{%- if config.extra.uglyurls %}index.html{%- endif %}">...more</a>
-        </div>
-        {%- if config.extra.meta_index.position %}
-        {%- if config.extra.meta_index.position == "bottom" or config.extra.meta_index.position == "both" %}
-        {{- macros::meta_index(page=project, config=config) }}
-        {%- endif %}
-        {%- endif %}
-      </article>
-    {%- endfor %}
+    {%- else %}
+    {{- macros::numpagination(paginator=paginator, config=config) }}
+    {%- endif %}
     </div>
-  {%- set section_item = get_section(path="posts/_index.md") %}
   {%- if config.extra.recent | default(value=true) %}
-    <div class="toc">
-      <div class="toc-sticky">
-        <h1><span class="s75">Recent Posts</span></h1>
-        {%- for page in section_item.pages | slice(end=config.extra.recent_items) %}
-          {{- page_macros::page_listing(page=page, config=config) }}
+    {#- The following line is checking if the template is being used for the root or a section #}
+    {%- if current_path is matching("^(/[[:alpha:]][[:alpha:]])?(/page/[[:digit:]]+)?/$") %}
+      {%- set sec = "" %}
+    {%- else %}
+      {%- if lang == config.default_language %}
+        {%- set sec = current_path | trim_start_matches(pat="/") | split(pat="/page/") | slice(end=1) | join(sep="") | trim_end_matches(pat="/") %}
+        {%- set sec = sec ~ "/" %}
+      {%- else %}
+        {%- set sec = current_path | trim_start_matches(pat="/" ~ lang ~ "/") | split(pat="/page/") | slice(end=1) | join(sep="") | trim_end_matches(pat="/") %}
+        {%- set sec = sec ~ "/" %}
+      {%- endif %}
+    {%- endif %}
+
+    {%- if lang == config.default_language %}
+    {%- set section_item = get_section(path=sec ~ "_index.md") %}
+    {%- else %}
+    {%- set section_item = get_section(path=sec ~ "_index." ~ lang ~ ".md") %}
+    {%- endif %}
+    <div class="sblock">
+      <div class="blockdiv sticky">
+        <span class="b s150">{{ macros::translate(key="Recent", default="Recent", i18n=i18n) }}</span>
+        {%- set recent_items=config.extra.recent_items | default(value=9) -%}
+        {%- for page in section_item.pages | slice(end=recent_items) %}
+          {{- macros::page_listing(page=page, config=config) }}
         {%- endfor %}
       </div>
     </div>

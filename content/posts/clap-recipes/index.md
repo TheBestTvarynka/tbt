@@ -2,6 +2,8 @@
 title = "Rust Clap recipes"
 date = 2023-06-15
 draft = false
+template = "post.html"
+description = "A collection of small `clap` recipes to help you write better CLI applications."
 
 [taxonomies]
 tags = ["clap", "recipes", "rust"]

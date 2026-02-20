@@ -2,6 +2,8 @@
 title = "Safety Comments Matter"
 date = 2025-05-31
 draft = false
+template = "post.html"
+description = "TL;DR: This article is highly inspired by [this GitHub comment](https://github.com/Devolutions/sspi-rs/pull/430#pullrequestreview-2850078587)."
 
 [taxonomies]
 tags = ["rust", "unsafe"]

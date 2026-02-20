@@ -2,6 +2,8 @@
 title = "Git recipes"
 date = 2024-06-22
 draft = false
+template = "post.html"
+description = "Recently I lectured in my company about [`git`](https://www.git-scm.com/) and resolving specific situations with it. It inspired me to write a comprehensive set of recipes about resolving common cases with `git`."
 
 [taxonomies]
 tags = ["recipes", "git"]

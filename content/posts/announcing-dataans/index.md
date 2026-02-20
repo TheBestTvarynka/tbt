@@ -2,6 +2,8 @@
 title = "Announcing Dataans v.0.1.0"
 date = 2024-10-19
 draft = false
+template = "post.html"
+description = "When you deliver work you’re really proud of, you’ve almost certainly done too much and taken too long. So, here is the very first release of my note-taking app. Learn about its unique features and my motivation."
 
 [taxonomies]
 tags = ["rust", "tool", "project", "tauri", "leptos", "dataans"]

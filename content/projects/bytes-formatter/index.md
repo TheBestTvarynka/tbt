@@ -3,6 +3,7 @@ title = "bytes-formatter"
 description = "Convert bytes between different representations (hex, dec, base64, etc)."
 date = 2023-04-09
 draft = false
+template = "post.html"
 
 [taxonomies]
 tags = ["js", "tools", "project"]

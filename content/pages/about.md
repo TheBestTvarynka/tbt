@@ -5,6 +5,8 @@ template = "pages.html"
 draft = false
 +++
 
+[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://stand-with-ukraine.pp.ua/)
+
 # Hi there :wave:
 
 I am Pavlo Myroniuk :man_technologist:, a software developer from Ukraine :ukraine:. Loves Rust :crab: and open-source software.
@@ -17,7 +19,7 @@ I am Pavlo Myroniuk :man_technologist:, a software developer from Ukraine :ukrai
 [![GitHub Badge](https://img.shields.io/badge/-TheBestTvarynka-533e75?style=flat-square&logo=Github&link=https://github.com/TheBestTvarynka)](https://github.com/TheBestTvarynka)
 [![BlueSky Badge](https://img.shields.io/badge/-TheBestTvarynka-bec6f4?style=flat-square&logo=bluesky&link=https://bsky.app/profile/thebesttvarynka.bsky.social)](https://bsky.app/profile/thebesttvarynka.bsky.social)
 
-This is my blog. I usually post some learning materials, guides/tips, and thoughts about something here.
+This is my _personal_ blog. I usually post some learning materials, guides/tips, and thoughts about something here.
 I didn't set a purpose to tell you everything I know. My motivation is to tell about the unusual parts of the experience and explain some topics I consider not described enough on the Internet.
 
 If you enjoy my articles and consider them useful, follow me on [GitHub](https://github.com/TheBestTvarynka) and star the corresponding repo.
@@ -31,25 +33,33 @@ If you enjoy my articles and consider them useful, follow me on [GitHub](https:/
 
 ## :zap: Technologies
 
+I have worked with plenty of things. There is no point in listing all of them.
+Below, I have listed the technologies I am the most experienced with and the most interested in.
+
 ![Rust](https://img.shields.io/badge/-Rust-5c1e0f?style=flat-square&logo=Rust)
-![Linux](https://img.shields.io/badge/-Linux-0f331b?style=flat-square&logo=Linux)
-
-![Nodejs](https://img.shields.io/badge/-Nodejs-black?style=flat-square&logo=Node.js)
+![C](https://img.shields.io/badge/-C-5c1e0f?style=flat-square&logo=C)
 ![JavaScript](https://img.shields.io/badge/-JavaScript-black?style=flat-square&logo=javascript)
+![TypeScript](https://img.shields.io/badge/-TypeScript-black?style=flat-square&logo=typescript)
 
-![Redis](https://img.shields.io/badge/-Redis-black?style=flat-square&logo=Redis)
+![Linux](https://img.shields.io/badge/-Linux-0f331b?style=flat-square&logo=Linux)
+(![ArchLinux](https://img.shields.io/badge/-I%20use%20Arch,%20btw-black?style=flat-square&logo=archlinux))
+![Windows](https://img.shields.io/badge/-Windows-black?style=flat-square&logo=windows)
+![Nodejs](https://img.shields.io/badge/-Nodejs-black?style=flat-square&logo=Node.js)
+![WebAssembly](https://img.shields.io/badge/-WebAssembly-black?style=flat-square&logo=webassembly)
+
 ![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-black?style=flat-square&logo=postgresql)
+![Redis](https://img.shields.io/badge/-Redis-black?style=flat-square&logo=Redis)
 
+![Cloudflare](https://img.shields.io/badge/-Cloudflare-black?style=flat-square&logo=cloudflare)
 ![Google Cloud](https://img.shields.io/badge/Google%20Cloud-black?style=flat-square&logo=google-cloud)
 ![Docker](https://img.shields.io/badge/-Docker-black?style=flat-square&logo=docker)
 ![Git](https://img.shields.io/badge/-Git-black?style=flat-square&logo=git)
-![GitHub](https://img.shields.io/badge/-GitHub-black?style=flat-square&logo=github)
-![GitLab](https://img.shields.io/badge/-GitLab-black?style=flat-square&logo=gitlab)
+![GitHub Actions](https://img.shields.io/badge/-GitHub%20Actions-black?style=flat-square&logo=github)
+![GitLab CI/CD](https://img.shields.io/badge/-GitLab%20CI/CD-black?style=flat-square&logo=gitlab)
 
 ## :teddy_bear: Fun
 
 [![Lichess](https://img.shields.io/badge/-Lichess-black?style=flat-square&logo=lichess)](https://lichess.org/@/TheBestTvarynka)
-[![stack**overflow**](https://img.shields.io/badge/-Stackoverflow-black?style=flat-square&logo=stackoverflow)](https://stackoverflow.com/users/9123725/pavlo-myroniuk)
-[![spotify](https://img.shields.io/badge/-Spotify-black?style=flat-square&logo=spotify)](https://open.spotify.com/user/xrebaxp1ppqe0byob8r94emqv)
+[![Spotify](https://img.shields.io/badge/-Spotify-black?style=flat-square&logo=spotify)](https://open.spotify.com/user/xrebaxp1ppqe0byob8r94emqv)
 
 This site is licensed under the [MIT license](https://github.com/TheBestTvarynka/tbt/blob/main/LICENSE).

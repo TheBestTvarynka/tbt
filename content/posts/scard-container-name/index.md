@@ -2,6 +2,8 @@
 title = "Smart card container name"
 date = 2024-04-22
 draft = false
+template = "post.html"
+description = "Occasionally, you need to be extra creative to find a root of the issue. Learn how I wrote three additional apps, used hooking, and WinDbg Time Travel just to debug the scard data signing process in Windows...and found out that the problem was in one hard-coded string in the scard cache."
 
 [taxonomies]
 tags = ["debugging", "windows", "scard"]

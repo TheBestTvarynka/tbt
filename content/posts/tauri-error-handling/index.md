@@ -2,6 +2,8 @@
 title = "Tauri error handling recipes"
 date = 2024-12-26
 draft = false
+template = "post.html"
+description = "I am writing my custom node-taking app in Rust (even on frontend) using Tauri. Here is what I learned about error handling."
 
 [taxonomies]
 tags = ["recipes", "rust", "tauri", "leptos"]
