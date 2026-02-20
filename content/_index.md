@@ -1,5 +1,6 @@
 +++
-paginate_by = 10
+title = "Home"
+template = "index.html"
+paginate_by = 5
 sort_by = "date"
-template = "home.html"
 +++
