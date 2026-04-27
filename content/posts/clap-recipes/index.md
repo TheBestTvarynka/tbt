@@ -6,7 +6,7 @@ template = "post.html"
 description = "A collection of small `clap` recipes to help you write better CLI applications."
 
 [taxonomies]
-tags = ["clap", "recipes", "rust"]
+tags = ["tool", "recipes", "rust"]
 
 [extra]
 keywords = "Rust, Clap, CLI, Args, Parsing"
@@ -14,7 +14,7 @@ toc = true
 thumbnail = "clap-recipes-thumbnail.png"
 +++
 
-I bet you know but I still wanna recall it. [`Clap`](https://github.com/clap-rs/clap) is a full-featured, fast Command Line Argument Parser for Rust. [docs.rs](https://docs.rs/clap/latest/clap/). [crates.io](https://crates.io/crates/clap).
+I bet you know, but I still wanna recall it. [`Clap`](https://github.com/clap-rs/clap) is a full-featured, fast Command Line Argument Parser for Rust. [docs.rs](https://docs.rs/clap/latest/clap/). [crates.io](https://crates.io/crates/clap).
 
 # Goals
 
@@ -28,13 +28,13 @@ I bet you know but I still wanna recall it. [`Clap`](https://github.com/clap-rs/
 * Write the *"ultimate"* guide to the `clap` library.
 * Create an introduction (or for newbies) article about the clap.
 
-The current article is basically recipes. It means, here we have described concrete problems, ways how to solve them, and examples of the execution.
+The current article is basically a recipe. It means that here we have described concrete problems, ways to solve them, and examples of their execution.
 
 # Recipes
 
 ## Collecting multiple values
 
-Imagine the following situation, you are writing some server. It can be the server side of some protocol, or proxy server, or something like that. At some point, you decided to add encryption. Now you need to add the user the ability to pass allowed encryption algorithms (ciphers) for server sessions.
+Imagine the following situation: you are writing some server. It can be the server-side of some protocol, a proxy server, or something like that. At some point, you decided to add encryption. Now you need to add the ability for the user to pass allowed encryption algorithms (ciphers) for server sessions.
 
 Let's try to do it. The first idea that comes to mind is just to use a vector of strings:
 
@@ -50,7 +50,7 @@ struct Config {
 
 **Note 1:** personally, I prefer the [*derive*](https://docs.rs/clap/latest/clap/_derive/index.html) approach to configure clap instead of a [*builder*](https://docs.rs/clap/latest/clap/index.html) approach.
 
-**Note 2:** for all examples in this article, I use the same `main` function:
+**Note 2:** For all examples in this article, I use the same `main` function:
 
 ```Rust
 /// Just prints the server configuration.
@@ -60,7 +60,7 @@ fn main() {
 }
 ```
 
-It'll work, here is an example:
+It'll work. Here is an example:
 
 ```bash
 ./cool-server --enc-algs aes256 --enc-algs des3 --enc-algs thebesttvarynka 
@@ -68,9 +68,9 @@ It'll work, here is an example:
 # Config { enc_algs: ["aes256", "des3", "thebesttvarynka"] }
 ```
 
-Good but here we have a big problem: values are not validated and the user can specify unsupported or just wrong algorithms. It'll be cool if we delegate the algorithm validation to the `clap`.
+Good, but here we have a big problem: values are not validated, and the user can specify unsupported or just wrong algorithms. Let's delegate algorithm validation to `clap`.
 
-First of all, we need to implement the `Cipher` enum. Most likely, you'll have such an enum already implemented in the project, but here we need to write it:
+First, we need to implement the `Cipher` enum. Most likely, you'll have such an enum already implemented in the project, but here we need to write it:
 
 ```Rust
 #[derive(Debug, Clone, clap::ValueEnum)]
@@ -88,7 +88,7 @@ pub enum Cipher {
 // impl TryFrom<&str> for Cipher { ... }
 ```
 
-**Pay attention** that we also added the `clap::ValueEnum` derive. It'll generate the [`ValueEnum`](https://docs.rs/clap/latest/clap/trait.ValueEnum.html) trait implementation and `clap` will be able to parse the raw string into concrete enum value. Now time to test it:
+**Pay attention** that we also added the `clap::ValueEnum` derive. It'll generate the [`ValueEnum`](https://docs.rs/clap/latest/clap/trait.ValueEnum.html) trait implementation, and `clap` will be able to parse the raw string into a concrete enum value. Now time to test it:
 
 ```bash
 ./cool-server --enc-algs aes256 --enc-algs des3
@@ -103,7 +103,7 @@ pub enum Cipher {
 
 Very cool :fire:. Clap validates the input for us and even tells the user possible values if smth goes wrong. You can read all code of the example above [here](https://github.com/TheBestTvarynka/trash-code/commit/f5bffb732b3f79a2ef00f83e335ae80125fa0294).
 
-In general, we can finish at this point this recipe, but I used to specify multiple values using a comma-separated string. The perfect arg looks for me like this:
+In general, we can finish this recipe at this point, but I used to specify multiple values using a comma-separated string. The perfect arg looks to me like this:
 
 ```bash
 ./cool-server --enc-algs aes256,des3
@@ -153,9 +153,9 @@ struct Config {
 }
 ```
 
-> *Why we should create the wrapper? Why is custom parser + `Vec<Cipher>` not enough?*
+> *Why should we create the wrapper? Why is custom parser + `Vec<Cipher>` not enough?*
 
-Yes, you can write just `Vec<Cipher>` with custom [`value_parser`](https://docs.rs/clap/latest/clap/struct.Arg.html#method.value_parser) and it'll compile. But it'll fail in runtime with the following error:
+Yes, you can write just `Vec<Cipher>` with custom [`value_parser`](https://docs.rs/clap/latest/clap/struct.Arg.html#method.value_parser) and it'll compile. But it'll fail at runtime with the following error:
 
 ```txt
 thread 'main' panicked at 'Mismatch between definition and access of `enc_algs`. Could not downcast to cool_server::cipher::Cipher, need to downcast to alloc::vec::Vec<cool_server::cipher::Cipher>
@@ -240,7 +240,7 @@ The full [src](https://github.com/TheBestTvarynka/trash-code/commit/eae20b208693
 
 ## Commands and arg groups
 
-Before we start this recipe, I wanna recall one thing: the difference between commands and args. First of all, commands don't have any dashed or slashed in the name. They are just words. Commands specify **what** to do, whereas args specify **how** to do it. Example:
+Before we start this recipe, I wanna recall one thing: the difference between commands and args. First of all, commands don't contain any dashes or slashes in their names. They are just words. Commands specify **what** to do, whereas args specify **how** to do it. Example:
 
 ```bash
 gcloud auth login --cred-file creds.json
@@ -252,7 +252,7 @@ In this recipe, we'll work with commands and args. You'll see a more complex exa
 
 > *Interesting. What do we need to configure? :smile:*
 
-We all know the [Imgur](https://imgur.com/) site (if not, then just visit). It has an [API](https://api.imgur.com/). Let's imagine that we decided to write the CLI tool that helps us to work with the *Imgur* site using its API. So, now we need to design the tool interface. We do not plan to cover the whole API. Just downloading and uploading. A quick draft configuration:
+We all know the [Imgur](https://imgur.com/) site (if not, then just visit). It has an [API](https://api.imgur.com/). Let's imagine we decided to write a CLI tool to help us work with the *Imgur* site using its API. So, now we need to design the tool interface. We do not plan to cover the whole API. Just downloading and uploading. A quick draft configuration:
 
 ```rust
 #[derive(Debug, Clone, Subcommand)]
@@ -274,9 +274,9 @@ struct Config {
 }
 ```
 
-We immediately have a few interesting moments: the [Subcommand](https://docs.rs/clap/latest/clap/trait.Subcommand.html) trait derive and the `PathBuff` type in the `api_key` field. We are not forced to use only simple types for args like `String`s, numbers, etc. If you have a concrete type that describes your value ([`PathBuff`](https://doc.rust-lang.org/stable/std/path/struct.PathBuf.html) for file path, [`url::Url`](https://docs.rs/url/latest/url/struct.Url.html) for urls, or even custom ones), then use this type in the configuration. It'll handle more errors during parsing and make further work easier.
+We immediately have a few interesting moments: the [Subcommand](https://docs.rs/clap/latest/clap/trait.Subcommand.html) trait derive and the `PathBuff` type in the `api_key` field. We are not forced to use only simple types for args like `String`s, numbers, etc. If you have a concrete type that describes your value ([`PathBuff`](https://doc.rust-lang.org/stable/std/path/struct.PathBuf.html) for file path, [`url::Url`](https://docs.rs/url/latest/url/struct.Url.html) for URLs, or even custom ones), then use this type in the configuration. It'll handle more errors during parsing and make further work easier.
 
-Now we add params for downloading command:
+Now we add params for downloading the command:
 
 ```rust
 #[derive(Debug, Clone, Subcommand)]
@@ -294,7 +294,7 @@ enum Command {
 }
 ```
 
-To download the image we need only two things: the source image link and the destination file path. This is how it works:
+To download the image, we need only two things: the source image link and the destination file path. This is how it works:
 
 ```bash
 ./img-tool download --help
@@ -314,7 +314,7 @@ To download the image we need only two things: the source image link and the des
 # For more information, try '--help'.
 ```
 
-Cool and pretty simple. But the upload is a little bit more complex. We wanna have two options where take the photo to upload: file image on the device or any public URL on the Internet. Here is the configuration for the upload command:
+Cool and pretty simple. But the upload is a little bit more complex. We wanna have two options to take the photo to upload: file image on the device or any public URL on the Internet. Here is the configuration for the upload command:
 
 ```rust
 #[derive(Debug, Clone, Args)]
@@ -345,7 +345,7 @@ enum Command {
 }
 ```
 
-Okay, we have two file sources: file or link. And we use [ArgGroup](https://docs.rs/clap/latest/clap/struct.ArgGroup.html) to specify that the user must specify only one of them: either file or link. And here is the demo:
+Okay, we have two file sources: a file or a link. And we use [ArgGroup](https://docs.rs/clap/latest/clap/struct.ArgGroup.html) to require the user to specify only one of them: either file or link. And here is the demo:
 
 ```bash
 ./img-tool upload --help
@@ -373,7 +373,7 @@ Okay, we have two file sources: file or link. And we use [ArgGroup](https://docs
 # Config { command: Upload { file_source: FileSource { file: None, link: Some(Url { scheme: "https", cannot_be_a_base: false, username: "", password: None, host: Some(Domain("i.imgflip.com")), port: None, path: "/7gq1em.jpg", query: None, fragment: None }) }, folder: "ferris" }, api_key: "key.json" }
 ```
 
-Another interesting thing: we can see the separated `--file` and `--link` args in the help message by the `<>` triangle brackets. It shows the user that only one of the is needed. Cool, right? :sunglasses:
+Another interesting thing: we can see the separated `--file` and `--link` args in the help message by the `<>` triangle brackets. It shows the user that only one of them is needed. Cool, right? :sunglasses:
 
 The full [src](https://github.com/TheBestTvarynka/trash-code/commit/aba3c688fa83a397d14a9339f564efe4625516e1) code of the example above.
 
@@ -381,7 +381,7 @@ The full [src](https://github.com/TheBestTvarynka/trash-code/commit/aba3c688fa83
 
 This recipe will be smaller than the previous ones and similar to the second one. But I just want to show that we can do such tricks.
 
-We are going to improve prev example by adding a more flexible way to pass the API key. Assume that for authentication we need two tokens: app id and app secret. And we want to operate them as one structure. Usually, in such cases, developers take them as two separate strings and then create one structure based on those strings. But we a smarter and know how to use commands:
+We are going to improve the previous example by adding a more flexible way to pass the API key. Assume that for authentication we need two tokens: app id and app secret. And we want to operate them as one structure. Usually, in such cases, developers treat them as two separate strings and then create a single structure based on those strings. But we are smarter and know how to use commands:
 
 ```rust
 #[derive(Debug, Clone, Args)]
@@ -433,7 +433,7 @@ The full [src](https://github.com/TheBestTvarynka/trash-code/commit/c3a77caad5bb
 
 ## Unsolvable problem
 
-This section is not an actual recipe. I'll tell you about a problem that doesn't have a perfect solution so far (or I just cannot find it).
+This section is not an actual recipe. I'll tell you about a problem that doesn't have a perfect solution yet (or I just cannot find one).
 
 Let's take the previous recipe and make the task more difficult. Assume that the user should specify the app id and secret **OR** API key file. In other words, the user should provide the one `--api-key-file` arg or `--api-app-id` and `--api-app-secret` args. It means one **OR** two arguments.
 
@@ -442,7 +442,7 @@ I found a few similar questions on the Internet:
 * [Clap either -a OR (-b AND -c) arguments](https://users.rust-lang.org/t/clap-either-a-or-b-and-c-arguments/80331)
 * [Using clap-derive with two groups of arguments](https://stackoverflow.com/questions/74846776/using-clap-derive-with-two-groups-of-arguments)
 
-But both of them didn't have any useful answers. So far, the following code is the best how we can solve this problem:
+But neither of them had any useful answers. So far, the following code is the best way we can solve this problem:
 
 ```rust
 #[derive(Debug, Clone, Args)]
@@ -474,8 +474,8 @@ struct ApiKey {
 
 The main idea is to create an [`ArgGroup`](https://docs.rs/clap/latest/clap/struct.ArgGroup.html) and require additional args in the `ApiKeyData` structure if one of the needed args is not specified. This approach has a lot of big inconveniences:
 
-* Fields in the `ApiKeyData` structure are optional. Yes, during parsing they will be validated and 100% have values, but for further work, we are forced to unwrap them and create another structure.
-* The help message for the user is not fully informative. It shows the among those three args only one is required. That is a lie because we need a key file **OR** app id + secret.
+* Fields in the `ApiKeyData` structure are optional. Yes, during parsing, they are validated, and 100% have values, but for further work, we are forced to unwrap them and create another structure.
+* The help message for the user is not fully informative. It shows that among those three arguments, only one is required. That is a lie because we need a key file **OR** app id + secret.
 
 Enough talking. Let's see it in action:
 
@@ -511,7 +511,7 @@ Enough talking. Let's see it in action:
 # For more information, try '--help'.
 ```
 
-The full [src](https://github.com/TheBestTvarynka/trash-code/commit/6d5ec50ea36aa2ca6fab7409e68c08a46d1a346e) code of the example above. Conclusion: this problem is solvable but in a very inconvenient way.
+The full [src](https://github.com/TheBestTvarynka/trash-code/commit/6d5ec50ea36aa2ca6fab7409e68c08a46d1a346e) code of the example above. Conclusion: this problem is solvable, but in a very inconvenient way.
 
 # References & final note
 
