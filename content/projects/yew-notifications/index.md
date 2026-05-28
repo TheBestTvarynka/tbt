@@ -6,7 +6,7 @@ draft = false
 template = "post.html"
 
 [taxonomies]
-tags = ["yew", "rust"]
+tags = ["yew", "rust", "frontend"]
 [extra]
 toc = true
 keywords = "Yew, Yew-components, Rust, Toaster"

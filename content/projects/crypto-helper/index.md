@@ -6,7 +6,7 @@ draft = false
 template = "post.html"
 
 [taxonomies]
-tags = ["yew", "rust", "tools", "project", "crypto-helper"]
+tags = ["yew", "rust", "tool", "project", "crypto-helper"]
 
 [extra]
 toc = true

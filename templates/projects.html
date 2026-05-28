@@ -26,7 +26,7 @@
     <li>
       <div style="display: flex;flex-direction: column;">
         <spn>
-          <a href="{{ project.permalink | safe }}">{{ project.title }}</a> - <time datetime="{{ project.date }}">{{ project.date | date(format="%F") }}</time> to <mark>{{ project.extra.enddate }}</mark>
+          <a href="{{ project.permalink | safe }}">{{ project.title }}</a> - <mark><time datetime="{{ project.date }}">{{ project.date | date(format="%F") }}</time></mark> to <mark>{{ project.extra.enddate }}</mark>
         </spn>
         <spn>{{ project.description | markdown(inline=true) | safe }}</spn>
       </div>
