@@ -12,6 +12,7 @@ tags = ["js", "tool", "project"]
 keywords = "byte-formatter, utils, hex, tools"
 toc = true
 enddate = 2022-11-22
+status = "finished"
 +++
 
 Visit this tool at [bf.qkation.com](https://bf.qkation.com).

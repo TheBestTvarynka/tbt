@@ -13,6 +13,7 @@ toc = true
 keywords = "Rust, Tauri, Leptos, Note-taking, Markdown"
 thumbnail = "dataans-thumbnail.png"
 enddate = "present"
+status = "development"
 +++
 
 Source code: [github/TheBestTvarynka/Dataans](https://github.com/TheBestTvarynka/Dataans/).

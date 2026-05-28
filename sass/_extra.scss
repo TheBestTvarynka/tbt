@@ -1,3 +1,37 @@
 /******************************************************************************
  *   Extra - Put your extra SASS/CSS here, it will get bundled with abridge.css
  *****************************************************************************/
+
+.project-layout {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.project-group {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+
+  h2 { margin-bottom: 0.75rem; }
+}
+
+.project-tile {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--cd);
+  border-radius: 4px;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+
+.project-dates {
+  opacity: 0.9;
+}
+
+.project-desc {
+
+}

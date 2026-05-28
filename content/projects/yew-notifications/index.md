@@ -11,6 +11,7 @@ tags = ["yew", "rust", "frontend"]
 toc = true
 keywords = "Yew, Yew-components, Rust, Toaster"
 enddate = "present"
+status = "maintenance"
 +++
 
 Notifications components library for [Yew](https://yew.rs/). It's like [react-toastify](https://www.npmjs.com/package/react-toastify) but for [Yew](https://yew.rs/) and more simpler (so far :smirk:).

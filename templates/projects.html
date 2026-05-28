@@ -1,5 +1,3 @@
-{# This Page Shows the Posts Grouped by Year: example.com/posts/ #}
-
 {% extends "base.html" %}
 {%- set uglyurls = config.extra.uglyurls | default(value=false) -%}
 {%- if config.extra.search_library %}{%- if config.extra.search_library == "offline" %}{% set uglyurls = true %}{% endif %}{% endif %}
@@ -20,18 +18,53 @@
 {%- endblock seo %}
 
 {%- block content %}
-<ul>
-  <span>I wrote tons of code/projects throughout my life in many programming languages. Below, I listed pet projects that <strong>serve a purpose</strong> and <strong>add some kind of usefulness</strong> to my life ✨.</span>
-  {% for project in section.pages %}
-    <li>
-      <div style="display: flex;flex-direction: column;">
-        <spn>
-          <a href="{{ project.permalink | safe }}">{{ project.title }}</a> - <mark><time datetime="{{ project.date }}">{{ project.date | date(format="%F") }}</time></mark> to <mark>{{ project.extra.enddate }}</mark>
-        </spn>
-        <spn>{{ project.description | markdown(inline=true) | safe }}</spn>
+<div>
+  <p>I wrote tons of code/projects throughout my life in many programming languages. Below, I listed pet projects that <strong>serve a purpose</strong> and <strong>add some kind of usefulness</strong> to my life ✨.</p>
+
+  {%- set groups = section.pages | group_by(attribute="extra.status") %}
+
+  <div class="project-layout">
+
+    {%- if groups.development %}
+    <section class="project-group">
+      <h2>In Development</h2>
+      {%- for project in groups.development %}
+      <div class="project-tile">
+        <a href="{{ project.permalink | safe }}"><strong>{{ project.title }}</strong></a>
+        <span class="project-dates"><time datetime="{{ project.date }}">{{ project.date | date(format="%Y-%m-%d") }}</time> — {{ project.extra.enddate }}</span>
+        <span class="project-desc">{{ project.description | markdown(inline=true) | safe }}</span>
       </div>
-    </li>
-  {% endfor %}
-</ul>
+      {%- endfor %}
+    </section>
+    {%- endif %}
+
+    {%- if groups.maintenance %}
+    <section class="project-group">
+      <h2>On Maintenance</h2>
+      {%- for project in groups.maintenance %}
+      <div class="project-tile">
+        <a href="{{ project.permalink | safe }}"><strong>{{ project.title }}</strong></a>
+        <span class="project-dates"><time datetime="{{ project.date }}">{{ project.date | date(format="%Y-%m-%d") }}</time> — {{ project.extra.enddate }}</span>
+        <span class="project-desc">{{ project.description | markdown(inline=true) | safe }}</span>
+      </div>
+      {%- endfor %}
+    </section>
+    {%- endif %}
+
+    {%- if groups.finished %}
+    <section class="project-group">
+      <h2>Finished</h2>
+      {%- for project in groups.finished %}
+      <div class="project-tile">
+        <a href="{{ project.permalink | safe }}"><strong>{{ project.title }}</strong></a>
+        <span class="project-dates"><time datetime="{{ project.date }}">{{ project.date | date(format="%Y-%m-%d") }}</time> — {{ project.extra.enddate }}</span>
+        <span class="project-desc">{{ project.description | markdown(inline=true) | safe }}</span>
+      </div>
+      {%- endfor %}
+    </section>
+    {%- endif %}
+
+  </div>
+</div>
 
 {%- endblock content %}
