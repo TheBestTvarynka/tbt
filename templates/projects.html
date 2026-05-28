@@ -26,7 +26,7 @@
   <div class="project-layout">
 
     {%- if groups.development %}
-    <section class="project-group">
+    <section class="project-group project-group-development">
       <h2>In Development</h2>
       {%- for project in groups.development %}
       <div class="project-tile">
@@ -39,7 +39,7 @@
     {%- endif %}
 
     {%- if groups.maintenance %}
-    <section class="project-group">
+    <section class="project-group project-group-maintenance">
       <h2>On Maintenance</h2>
       {%- for project in groups.maintenance %}
       <div class="project-tile">
@@ -52,7 +52,7 @@
     {%- endif %}
 
     {%- if groups.finished %}
-    <section class="project-group">
+    <section class="project-group project-group-finished">
       <h2>Finished</h2>
       {%- for project in groups.finished %}
       <div class="project-tile">
