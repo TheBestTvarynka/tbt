@@ -26,11 +26,11 @@
 }
 
 .project-group-maintenance {
-  border-left: 5px solid rgb(122, 122, 230);
+  border-left: 5px solid rgb(135, 135, 242);
 }
 
 .project-group-finished {
-  border-left: 5px solid rgb(168, 85, 188);
+  border-left: 5px solid rgb(193, 99, 216);
 }
 
 .project-tile {
@@ -40,6 +40,10 @@
   border-radius: 4px;
   text-decoration: none;
   margin-bottom: 1rem;
+
+  > a {
+    font-size: 1.3em;
+  }
 }
 
 .project-dates {
