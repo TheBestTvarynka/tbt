@@ -1,16 +1,18 @@
 +++
 title = "crypto-helper"
-description = "Web app that can hash/encrypt/sign the data. JWT debugger."
+description = "Web app that can hash/hmac, encrypt/decrypt, and sign/verify the data, debug JWT tokens, parse and edit ASN1 structures, compute diffs, and more. Visit this tool at [crypto.qkation.com](https://crypto.qkation.com)."
 date = 2024-08-24
 draft = false
 template = "post.html"
 
 [taxonomies]
-tags = ["yew", "rust", "tools", "project", "crypto-helper"]
+tags = ["yew", "rust", "tool", "project", "crypto-helper"]
 
 [extra]
 toc = true
 keywords = "Rust, Yew, Crypto, JWT, Encrypt, Decrypt, Hash, HMAC, MAC, RSA, ASN1, ASN1 parser, ASN1 editor"
+enddate = "present"
+status = "maintenance"
 +++
 
 Visit this tool at [crypto.qkation.com](https://crypto.qkation.com).

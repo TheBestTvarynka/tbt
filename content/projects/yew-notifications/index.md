@@ -1,15 +1,17 @@
 +++
 title = "yew-notifications"
-description = "Notifications components library for Yew. It's like react-toastify but for Yew."
+description = "Notifications components library for [Yew](https://yew.rs/). It's like [react-toastify](https://www.npmjs.com/package/react-toastify) but for Yew."
 date = 2023-04-17
 draft = false
 template = "post.html"
 
 [taxonomies]
-tags = ["yew", "rust"]
+tags = ["yew", "rust", "frontend"]
 [extra]
 toc = true
 keywords = "Yew, Yew-components, Rust, Toaster"
+enddate = "present"
+status = "maintenance"
 +++
 
 Notifications components library for [Yew](https://yew.rs/). It's like [react-toastify](https://www.npmjs.com/package/react-toastify) but for [Yew](https://yew.rs/) and more simpler (so far :smirk:).

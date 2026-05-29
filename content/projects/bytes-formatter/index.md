@@ -1,16 +1,18 @@
 +++
 title = "bytes-formatter"
-description = "Convert bytes between different representations (hex, dec, base64, etc)."
-date = 2023-04-09
+description = "Convert bytes between different representations (hex, dec, base64, etc). Stupidly simple but useful tool. Visit this tool at [bf.qkation.com](https://bf.qkation.com)."
+date = 2022-04-16
 draft = false
 template = "post.html"
 
 [taxonomies]
-tags = ["js", "tools", "project"]
+tags = ["js", "tool", "project"]
 
 [extra]
 keywords = "byte-formatter, utils, hex, tools"
 toc = true
+enddate = 2022-11-22
+status = "finished"
 +++
 
 Visit this tool at [bf.qkation.com](https://bf.qkation.com).

@@ -1,17 +1,19 @@
 +++
 title = "dataans"
-description = "Take notes in markdown snippets grouped into spaces."
+description = "Take notes in MD snippets grouped into spaces. Local-first, multi-device synchronization, drop-down mode. Made with :sparkling_heart: by `TheBestTvarynka` for `TheBestTvarynka`."
 date = 2024-10-19
 draft = false
 template = "post.html"
 
 [taxonomies]
-tags = ["rust", "tauri", "leptos", "project"]
+tags = ["rust", "tauri", "leptos", "project", "tool"]
 
 [extra]
 toc = true
 keywords = "Rust, Tauri, Leptos, Note-taking, Markdown"
 thumbnail = "dataans-thumbnail.png"
+enddate = "present"
+status = "development"
 +++
 
 Source code: [github/TheBestTvarynka/Dataans](https://github.com/TheBestTvarynka/Dataans/).
