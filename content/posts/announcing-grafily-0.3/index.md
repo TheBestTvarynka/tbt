@@ -70,6 +70,8 @@ I would rather keep the app simple then unreasonably complex.
 
 # Showcase
 
+<sup><sub>All persons in demo screenshots below are generated using AI. If you find any coincidences with real people, please contact me, and I will fix them.</sub></sup>
+
 # Features
 
 - **Start-up menu.** The start-up menu shows when the user opens the plugin.
@@ -79,13 +81,14 @@ I would rather keep the app simple then unreasonably complex.
   It allows the user to have a different relationships graphs on hand without the need to rebuild the whole graph every time.
   The saved graphs are listed on the right side of the start-up menu.
 - **Data directory configuring.** The user can configure the directory that the plugin will scan for people's data.
+  ![](./settings.png)
 - **Graphs layout building and rendering:**
   * Tree-baed layout called [Reingold-Tilford](#reingold-tilford).
     ![](./tree.png)
   * Graph-based layout called [Brandes-Köpf](#brandes-kopf).
     ![](./graph.png)
 - **Interactivity.** The user is able to collapse/expand nodes, rearrange nodes (swap siblings, swap spouse nodes in the marriage, etc).
-  UI buttons for the interactiviry are located at the top right corner of the graph view and called the _side panel_:
+  UI buttons for the interactivity are located at the top right corner of the graph view and called the _side panel_:
 
   ![](./side-panel.png)
     1. Move the node left among its siblings.
@@ -101,12 +104,12 @@ I would rather keep the app simple then unreasonably complex.
 
 When the user opens the plugin, it automatically starts vault scannings for family person's pages.
 It expect the vault to have one page per person.
-It's not neccessary to scan all `.md` files inside the vault.
+It's not necessary to scan all `.md` files inside the vault.
 The user can configure the target directory and the app will scan files only inside this dir.
 
-// TODO: target dir settings
+![](./settings.png)
 
-To be successfully accepted, the `.md` page must have predefined metadata at the beggining of the page:
+To be successfully accepted, the `.md` page must have predefined metadata at the beginning of the page:
 
 ```md
 # <surname> <name>
@@ -137,7 +140,7 @@ Example:
 I was born in the Volyn region, the westest part of Ukraine.
 ```
 
-Based on the specified relationships in each person metadata, the app is able to build the full relashionships graph.
+Based on the specified relationships in each person metadata, the app is able to build the full relationships graph.
 You can type any information you want after the `---`. The `# <surname> <name>` line is required. All other key-value pairs are optional.
 Moreover, you do not need to specify the spouse link for both; only one link is sufficient.
 For example, if you specified in the metadata that Bob's spouse is Emma, then it is not required to specify Bob in Emma's metadata.
@@ -146,25 +149,121 @@ The most interesting part is how the app build the graph. It is explained in the
 
 ## Architechture
 
-<table style="border:none;border-collapse:collapse;">
+The app works in 4 main stages:
+
+<table style="border:none;border-collapse:collapse;table-layout:fixed;">
+<colgroup>
+    <col style="width: 40%;">
+    <col style="width: 60%;">
+  </colgroup>
+<tbody>
   <tr>
     <td style="border:none;border-collapse:collapse;">
 {% mermaiddiagram() %}
 flowchart TD
-    A[".md files"] -->|Parse and extract metadata| B["Index"]
-    B -->|Build internal representation| C["Graph structure"]
-    C -->|Calculate nodes positions| D["Nodes coordinates and edges"]
-    D -->|Render using `reactflow`| E["Pretty graph ✨"]
+    A[".md files"] -->|1. Parse and extract metadata| B["Index"]
+    B -->|2. Build internal representation| C["Graph structure"]
+    C -->|3. Calculate nodes positions| D["Nodes coordinates and edges"]
+    D -->|4. Render using `reactflow`| E["Pretty graph ✨"]
 {% end %}
     </td>
     <td style="border:none;border-collapse:collapse;">
-So, the app works in 4 main stages:
 
 1. `.md` files parsing. I already described that above, so we will not focus on it here.
+2. Obviously, it's not possible to place family persons on the 2-dimensional plane.
+  The entire family history can be a huge complicated graph.
+  Also, the perfect nodes layout does not exist because in different cases the user wants to see different people in different positions.
+  So, each layout algorithm has its own internal relationships representation.
+  This representation usually contains only nodes that will be rendered on the view and their relationships (nodes edges).
+  Optionally, the internal representation can contains an additional data to help it to build the resulting graph.
+3. Each layout algorithm implements its own solution for calculating nodes positions (`x` and `y` coordinates).
+  The third step is to calculate these coordinates.
+4. And the last forth step is to create `Node[]` and `Edge[]` objects and pass them to `rectflow` view.
     </td>
   </tr>
+</tbody>
 </table>
 
+At this point, the _internal representation_ can be a bit magical thing.
+Let me explain it better on an example.
+Let's take the Reingold-Tilford. It is the simplest layout I have.
+It can render only direct ancestors and descendants of the selected person/marriage:
+
+![](./nancy-demo.png)
+
+Intuitively you can assume that internally it's basically a tree. 
+And you will be right. In the code it looks like this ([src](https://github.com/TheBestTvarynka/grafily/blob/96b65e62e0ace284a3727ca7400cd795bd1cd02b/src/layout/tree/treeBuilder.ts#L105-L114)):
+
+```ts
+/**
+ * Tree builder which allows creating and modifying family trees.
+ * This tree builder can be used for parents (ancestors) and children (descendants)
+ * trees generations. The implemented behaviour is abstract enough.
+ */
+export class TreeBuilder {
+    private family: Index;
+    private children: Map<string, TreeNode[]> = new Map();
+    private root: TreeNode | null = null;
+    private getChildNodes: (nodeId: TreeNode, family: Index) => TreeNode[];
+
+    /* ... */
+}
+```
+
+It contains a family `Index` (all family relationships), a map with connections from parent to children nodes, and the root node/
+There is nothing complicated.
+
+On the screenshot above, you could see parents tree (ancestors tree) and children tree (descendants tree) of _Nance Mordor_.
+Internally, it's just two trees ([src](https://github.com/TheBestTvarynka/grafily/blob/96b65e62e0ace284a3727ca7400cd795bd1cd02b/src/layout/tree/index.ts#L30-L34)):
+
+```ts
+export class ReingoldTilford {
+    private family: Index;
+    private parentsTreeBuilder: TreeBuilder;
+    private childrenTreeBuilder: TreeBuilder;
+    private root: string | null = null;
+
+    /* ... */
+
+}
+```
+
+The implementation is abstracted over the `getChildNodes` function, which returns either node parents or node children.
+
+## Persistence
+
+The attentive reader will notice a one problem around `TreeBuilder`: it cannot be saved into the file easily because it uses complex types, like `Map`, inside.
+
+And you will be right. To be able to correctly serialize the structure into the JSON, the object needs to be a _plain_ object and does not contain circular references.
+
+To resolve this issue, every layout implementation implements two methods for serializing and deserealizing ([src 1](https://github.com/TheBestTvarynka/grafily/blob/96b65e62e0ace284a3727ca7400cd795bd1cd02b/src/layout/tree/treeBuilder.ts#L100-L103) and [src 2](https://github.com/TheBestTvarynka/grafily/blob/96b65e62e0ace284a3727ca7400cd795bd1cd02b/src/layout/tree/index.ts#L334-L350)):
+
+```ts
+// Can be safely serialized using `JSON.stringify`.
+export interface FamilyTree {
+    children: Record<string, TreeNode[]>;
+    root: TreeNode;
+}
+
+/**
+ * Returns the layout state ready for serialization. Is it safe to stringify it to the JSON
+ * and parse back again.
+ * For the `ReingoldTilford`, the `data` field has `{ parentsTreeBuilder: FamilyTree, childrenTreeBuilder: FamilyTree }` type.
+ *
+ * @returns {SerializableLayout} - A object ready to be serialized.
+ */
+toSerializableObject(): SerializableLayout {
+    return {
+        name: REINGOLD_TILFORD,
+        data: {
+            parentsTreeBuilder: this.parentsTreeBuilder.familyTree(), // returns a `FamilyTree` object.
+            childrenTreeBuilder: this.childrenTreeBuilder.familyTree(),
+        },
+    };
+}
+```
+
+## Interactivity
 
 
 ## Layout algorithms
