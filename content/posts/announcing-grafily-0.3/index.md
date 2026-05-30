@@ -6,10 +6,10 @@ template = "post.html"
 description = "Obsidian plugin for rendering pretty family graphs (family trees)"
 
 [taxonomies]
-tags = ["js", "ts", "project", "react", "algorithms", "grafily"]
+tags = ["javascript", "typescript", "project", "react", "algorithms", "data-structures"]
 
 [extra]
-keywords = "TypeScript, Graphs, Algoritjms"
+keywords = "TypeScript, Graphs, Algorithms"
 toc = true
 mermaid = true
 # thumbnail = "dataans-thumbnail.png"
@@ -19,7 +19,7 @@ Short release notes: [github/TheBestTvarynka/grafily/v.0.3.0](https://github.com
 
 # Intro
 
-Around a month ago I released Grafily v.0.3.0. I was really happy to reach this mailstone.
+Around a month ago I released Grafily v.0.3.0. I was really happy to reach this milestone.
 Grafily is the most algorithmically challenging project so far and I had a lot of enjoyment working on it.
 The fact that I use this tool personally in the scope of my own family research makes me happy.
 
@@ -38,7 +38,7 @@ You can use the page index to jump to any section you are interested in.
 
 # Philosophy
 
-The Graphily has one congreate goal, purpose: render pretty family relationships graphs.
+The Grafily has one concrete goal, purpose: render pretty family relationships graphs.
 It will never become an all-in-one genealogy research tool.
 It will never become an universal graphs renderer. Or anything like that.
 The Grafily follows the [Unix philosophy](https://en.wikipedia.org/wiki/Unix_philosophy#Do_One_Thing_and_Do_It_Well):
@@ -236,7 +236,7 @@ The attentive reader will notice a one problem around `TreeBuilder`: it cannot b
 
 And you will be right. To be able to correctly serialize the structure into the JSON, the object needs to be a _plain_ object and does not contain circular references.
 
-To resolve this issue, every layout implementation implements two methods for serializing and deserealizing ([src 1](https://github.com/TheBestTvarynka/grafily/blob/96b65e62e0ace284a3727ca7400cd795bd1cd02b/src/layout/tree/treeBuilder.ts#L100-L103) and [src 2](https://github.com/TheBestTvarynka/grafily/blob/96b65e62e0ace284a3727ca7400cd795bd1cd02b/src/layout/tree/index.ts#L334-L350)):
+To resolve this issue, every layout implementation implements two methods for serializing and deserializing ([src 1](https://github.com/TheBestTvarynka/grafily/blob/96b65e62e0ace284a3727ca7400cd795bd1cd02b/src/layout/tree/treeBuilder.ts#L100-L103) and [src 2](https://github.com/TheBestTvarynka/grafily/blob/96b65e62e0ace284a3727ca7400cd795bd1cd02b/src/layout/tree/index.ts#L334-L350)):
 
 ```ts
 // Can be safely serialized using `JSON.stringify`.

@@ -6,7 +6,7 @@ template = "post.html"
 description = "The [API Monitor](http://www.rohitab.com/apimonitor) speaks for itself. It's a great tool for the system API calls debugging, monitoring, information extraction, exploring. This post shows how to extend API Monitor APIs collection and add your custom one."
 
 [taxonomies]
-tags = ["debugging", "api-monitor", "rust", "windows"]
+tags = ["debugging", "rust", "windows"]
 
 [extra]
 keywords = "Rust, API Monitor, Debugging, API"
