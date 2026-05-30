@@ -15,7 +15,7 @@ mermaid = true
 # thumbnail = "dataans-thumbnail.png"
 +++
 
-[github/TheBestTvarynka/grafily/v.0.3.0](https://github.com/TheBestTvarynka/grafily/releases/tag/v.0.3.0)
+Short release notes: [github/TheBestTvarynka/grafily/v.0.3.0](https://github.com/TheBestTvarynka/grafily/releases/tag/v.0.3.0).
 
 # Intro
 
@@ -256,24 +256,80 @@ toSerializableObject(): SerializableLayout {
     return {
         name: REINGOLD_TILFORD,
         data: {
-            parentsTreeBuilder: this.parentsTreeBuilder.familyTree(), // returns a `FamilyTree` object.
+            parentsTreeBuilder: this.parentsTreeBuilder.familyTree(), // Returns a `FamilyTree` object.
             childrenTreeBuilder: this.childrenTreeBuilder.familyTree(),
         },
     };
 }
 ```
 
+Such approach allows the user to restore the layout state from the disk and continue working from the same place.
+
 ## Interactivity
 
+Now let's talk about interactivity.
+We do not want to do an extra job on every user click because otherwise the interface will be laggy.
+
+<table style="border:none;border-collapse:collapse;table-layout:fixed;">
+<colgroup>
+    <col style="width: 35%;">
+    <col style="width: 65%;">
+  </colgroup>
+<tbody>
+  <tr>
+    <td style="border:none;border-collapse:collapse;">
+{% mermaiddiagram() %}
+flowchart TD
+    A["User action"] -->|1. Update internal relationships| B["Updated internal representation"]
+    B -->|2. Recalculate nodes positions| C["Nodes coordinates and edges"]
+    C -->|3. Rerender using `reactflow`| D["Pretty graph ✨"]
+{% end %}
+    </td>
+    <td style="border:none;border-collapse:collapse;">
+
+1. When the user decides to edit the graph, the corresponding action is propagates to the layout object which, in turn, edits the internal representation accordingly.
+  For example, if the user expands parents of the person, new persons will be added and linked to the internal representation.
+2. When the internal representation is altered, then it recalculates nodes coordinates.
+  This stage will create new `Node[]` and `Edge[]` objects.
+  I have two reasons for that:
+
+    1. It's too hard to trace and edit existing `Node[]` and `Edge[]` objects.
+    2. We need a new array object anyway to trigger the React component rerender.
+  
+  From the React component prospective, all interactivity boils down to:
+
+  ```ts
+  const newGraph = layout.action(parameters);
+  setGraph(newGraph);
+
+  // For example:
+  const newGraph = layout.collapseChildren(nodeId);
+  setGraph(newGraph);
+  ```
+3. And the last third step is to pass `Node[]` and `Edge[]` objects to the `rectflow` view.
+    </td>
+  </tr>
+</tbody>
+</table>
+
+Any graph modifications does not require the full graph rebuild.
+After any user action, only a small part (usually) of the graph is affected.
 
 ## Layout algorithms
+
+Below are the high-lever overview.
+I cannot put everything in one post.
+I plan to write separate blog posts for all algorithms involved in Grafily.
+Descriptions below aim to explain proc and cons of each layout type but now how they work.
 
 ### Reingold-Tilford
 
 ### Brandes-Köpf
 
-# Showcase
+# What's next?
 
 # Conclusions
 
 # References
+
+1. GitHub release [github/TheBestTvarynka/grafily/v.0.3.0](https://github.com/TheBestTvarynka/grafily/releases/tag/v.0.3.0).
