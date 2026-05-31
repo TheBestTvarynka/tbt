@@ -6,7 +6,7 @@ draft = false
 template = "post.html"
 
 [taxonomies]
-tags = ["js", "tool", "project"]
+tags = ["javascript", "tool", "project"]
 
 [extra]
 keywords = "byte-formatter, utils, hex, tools"
