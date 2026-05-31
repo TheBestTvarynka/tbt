@@ -1,6 +1,6 @@
 +++
 title = "Announcing Grafily v.0.3.0"
-date = 2026-06-04
+date = 2026-05-31
 draft = false
 template = "post.html"
 description = "Obsidian plugin for rendering pretty family graphs (family trees)"
@@ -12,7 +12,7 @@ tags = ["javascript", "typescript", "project", "react", "algorithms", "data-stru
 keywords = "TypeScript, Graphs, Algorithms"
 toc = true
 mermaid = true
-# thumbnail = "dataans-thumbnail.png"
+thumbnail = "grafily-thumbnail.png"
 +++
 
 Short release notes: [github/TheBestTvarynka/grafily/v.0.3.0](https://github.com/TheBestTvarynka/grafily/releases/tag/v.0.3.0).
@@ -72,11 +72,9 @@ It means that some features can be discarded in favor of app simplicity.
 The benefits of some features may not justify the complexity of their implementation.
 I would rather keep the app simple than unreasonably complex.
 
-# Showcase
+# Features
 
 <sup><sub>All persons in demo screenshots below are generated using AI. If you find any coincidences with real people, please contact me, and I will fix them.</sub></sup>
-
-# Features
 
 - **Start-up menu.** The start-up menu shows when the user opens the plugin.
   It allows the user to either load a saved graph or set parameters and generate a new one.
@@ -318,6 +316,9 @@ flowchart TD
 
 Any graph modifications do not require a full graph rebuild.
 After any user action, only a small part (usually) of the graph is affected.
+
+The selected approach allows for decoupling rendering and React components from the layout algorithms implementation.
+I can easily modify the React parts without worrying about breaking the algorithmic part and vice versa.
 
 ## Layout algorithms
 
