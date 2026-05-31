@@ -21,9 +21,9 @@ Short release notes: [github/TheBestTvarynka/grafily/v.0.3.0](https://github.com
 
 Around a month ago, I released Grafily v.0.3.0. I was really happy to reach this milestone.
 Grafily is the most algorithmically challenging project so far, and I had a lot of enjoyment working on it.
-The fact that I personally use this tool in the context of my own family research makes me happy.
+The fact that I personally use this tool for my own family research makes me happy.
 
-Let me recall what is Grafily and what its purpose.
+Let me recall what Grafily is and what its purpose is.
 Grafily is an Obsidian plugin for rendering family relationship graphs and trees.
 It scans a person's pages inside the vault and builds the tree/graph based on it.
 
@@ -70,7 +70,7 @@ TL;DR. This is a citation from the mentioned article above:
 :thinking: What does it mean for the app?
 It means that some features can be discarded in favor of app simplicity.
 The benefits of some features may not justify the complexity of their implementation.
-I would rather keep the app simple then unreasonably complex.
+I would rather keep the app simple than unreasonably complex.
 
 # Showcase
 
@@ -82,7 +82,7 @@ I would rather keep the app simple then unreasonably complex.
   It allows the user to either load a saved graph or set parameters and generate a new one.
   ![](./start-up_menu.png)
 - **Persistence.** The user can save generated graphs and reopen them in the next session.
-  It allows the user to keep different relationship graphs on hand without having to rebuild the whole graph every time.
+  It allows the user to keep multiple relationship graphs on hand without having to rebuild the entire graph each time.
   The saved graphs are listed on the right side of the start-up menu.
 - **Data directory configuring.** The user can configure the directory that the plugin will scan for people's data.
   ![](./settings.png)
@@ -236,7 +236,7 @@ The implementation is abstracted over the `getChildNodes` function, which return
 
 ## Persistence
 
-The attentive reader will notice one problem with `TreeBuilder`: it cannot be saved to the file easily because it uses complex types, such as `Map`, internally.
+The attentive reader will notice one problem with `TreeBuilder`: it cannot be easily saved to a file because it uses complex types, such as `Map`, internally.
 
 And you will be right. To correctly serialize the structure to JSON, the object must be a _plain_ object and not contain circular references.
 
@@ -335,7 +335,7 @@ I have a separate blog post about it: [Drawing Genealogy Graphs. Part 1: Tree Dr
 **Pros:**
 
 - It is a simple layout perfect for seeing one person/marriage direct ancestors or descendants.
-- It is pretty looking because (almost) all nodes are centered over its children.
+- It is pretty looking because (almost) all nodes are centered over their children.
 
 **Cons:**
 
