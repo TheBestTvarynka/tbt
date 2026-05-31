@@ -31,12 +31,14 @@ It scans person's pages inside the vault and builds the tree/graph based on it.
 Graphs include trees.
 
 The resulting graph is interactive.
-It means that the user is able to change the graph structure, expand relationships (add nodes), or collapse them (hide).
+It means that the user is able to change the graph structure, expand relationships (add nodes), or collapse them (hide), swap spouses in the marriage, and even rearrange siblings.
 
 This article explains what have been implemented, how it works, includes a showcase, and describes plans for the future.
 You can use the page index to jump to any section you are interested in.
 
 # Philosophy
+
+## Do one thing and do it well
 
 The Grafily has one concrete goal, purpose: render pretty family relationships graphs.
 It will never become an all-in-one genealogy research tool.
@@ -52,6 +54,8 @@ It does not even render them, because the [`reactflow`](https://reactflow.dev/) 
 flowchart LR
     first["bunch of .md files"] -->|Grafily| second["Pretty graph ✨"]
 {% end %}
+
+## The Worse Is Better
 
 Did you hear about [the _worse-is-better_ philosophy](https://www.dreamsongs.com/RiseOfWorseIsBetter.html)? If not, I encourage you to read [The Rise of Worse is Better](https://www.dreamsongs.com/RiseOfWorseIsBetter.html) article.
 
@@ -320,16 +324,143 @@ After any user action, only a small part (usually) of the graph is affected.
 Below are the high-lever overview.
 I cannot put everything in one post.
 I plan to write separate blog posts for all algorithms involved in Grafily.
-Descriptions below aim to explain proc and cons of each layout type but now how they work.
+Descriptions below aim to explain pros and cons of each layout type but now how they work.
 
 ### Reingold-Tilford
 
+I already mentioned this layout type many time above.
+It has such interesting name because I developed it based on the Reingold-Tilford algorithm for calculating tree nodes coordinates (tree drawing problem).
+I have a separate blog post about it: [Drawing Genealogy Graphs. Part 1: Tree Drawing Using Reingold-Tilford Algorithm](https://tbt.qkation.com/posts/draw-tree-using-reingold-tilford-algorithm/).
+
+**Pros:**
+
+- It is a simple layout perfect for seeing one person/marriage direct ancestors or descendants.
+- It is pretty looking because (almost) all nodes are centered over its children.
+
+**Cons:**
+
+- The simplicity is also a limitation. No way to render parallel families or join two different family trees.
+
+**Supported interactivity:**
+
+- The user can collapse or expand parents of any parent node starting from the selected person/marriage and up the bloodline (ancestors tree).
+  ![](./tree-parents-interactivity.png)
+- The user can collapse or expand children of any children node starting from the selected person/marriage and down the bloodline (descendants tree).
+  ![](./tree-children-interactivity.png)
+- The user can swap any marriage spouses vice versa.
+  | Before swap | After swap |
+  |-|-|
+  | ![](./tree-before-marriage-swap.png) | ![](./tree-after-marriage-swap.png) |
+- The user can rearrange sibling. It is called _to move the current node left/right_.
+  | Before move left | After move left |
+  |-|-|
+  | ![](./tree-before-move-left.png) | ![](./tree-after-move-left.png) |
+
 ### Brandes-Köpf
+
+The most powerful (at the moment of writing) layout type.
+Internally it is a bidirectional layered graph.
+Almost the most generic graph you can think of ([src](https://github.com/TheBestTvarynka/grafily/blob/96b65e62e0ace284a3727ca7400cd795bd1cd02b/src/layout/fullGraph/graphBuilder.ts#L91-L102)):
+
+```ts
+/**
+ * A special class for all graph manipulations. It is used to build the initial graph and modify it when the user makes any changes.
+ * This implementation does not calculate any nodes positions. Its only purpose is to modify the graph structure and layering.
+ */
+export class GraphBuilder {
+    private nodes = new Map<string, GraphNode>();
+    // string - node id.
+    // string[] - list of parent node ids.
+    private parents = new Map<string, string[]>();
+    // string - node id.
+    // string[] - list of child node ids.
+    private children = new Map<string, string[]>();
+    // number - layer index.
+    // string[] - list of node ids in the layer.
+    private layers: Map<number, string[]> = new Map<number, string[]>();
+    private family: Index;
+
+    /* */
+}
+```
+
+Its name is taken from the nodes coordinates algorithm that was used: [Fast and Simple Horizontal Coordinate Assignment](https://scispace.com/pdf/fast-and-simple-horizontal-coordinate-assignment-2aawem94ts.pdf).
+To be honest, I did not develop the coordinates assignment algorithm from scratch.
+The implementation is highly inspired by the `dagre` project: [github/dagrejs/dagre/2595d05a0f/lib/position/bk.js](https://github.com/dagrejs/dagre/blob/2595d05a0fbb7721f35bfcaab5fbf40f5b3858ca/lib/position/bk.js).
+Basically, that's the same algorithm, but rewritten in TypeScript and adapted to the current use case.
+You can read about it more here:
+
+- The [Dagre](https://github.com/dagrejs/dagre) project on GitHub.
+- [github/dagrejs/dagre/wiki#recommended-reading](https://github.com/dagrejs/dagre/wiki#recommended-reading).
+
+I do not have a separate article about it yet, but I plan to write it someday and hope this day will come :innocent:.
+
+**Pros:**
+
+- It is able of rendering parallel families: families of the sibling spouse, for example.
+  ![](./graph.png)
+- The use can edit aby part of the graph.
+
+**Cons:**
+
+- Not all nodes are perfect centered. Even more, almost all nodes are not perfectly centered.
+  The resulting graph is not super aesthetic or perfectly rendered.
+  It can annoy you a bit.
+- Currently, not all possible graph modification are implemented but they are at least possible and planned to be implemented :wink:.
+
+**Supported interactivity:**
+
+- The user can collapse/expend any parents of any person.
+- The user can collapse/expand children of any marriage.
+- The user can swap spouses of any marriage.
+- Just like in the tree case, the user can rearrange sibling (_to move the current node left or right_).
+
+As you can see, this layout is extremely flexible and powerful.
+
+![](./graph-interactivity.png)
+
+In reality, the Brandes-Köpf layout usage is not that simple.
+The user must follow the rules to be able to modify the graph. There are some of them.
+
+The moving the current node left and right actions have limitations:
+
+- The selected node and the neighbor node in the move direction must not have children nodes (children nodes must be collapsed).
+- The selected node and the neighbor node in the move direction must have only one parent connection: the common parent node.
+  Spouses parents (if any) must be collapsed.
+
+Because it is allowed for children nodes to have parallel families, it is not easy to determine how to swap sub-graphs of two siblings and avoid edges crossing.
+Of course, I am sure I could create some smart-ass graph walking algorithm which will remember the borders of both sub-graphs and then swap them, but I thought about that for a moment and decided that it is not worth the trouble.
+I decided to add limitations above in favor of implementation simplicity (see [Philosophy#the-worse-is-better](#the-worse-is-better) section).
+The same story with the spouses swap action limitations:
+
+- Maximum one spouse of the target marriage is allowed to have parents expanded.
 
 # What's next?
 
+I have two big directions of development:
+
+1. First, I need to implement more possible modifications in the Brandes-Köpf layout.
+  My idea is simple: if you can think of any family graph on 2D plain without edges crossing, then this graph should be possible to recreate in Grafily.
+2. Currently, only small subset of families are supported: only one marriage per person, only one mom and one dad per person.
+  What about adoption, step-dad/mom and their previous families, remarriage?
+  I do not know what is the best way to support all possible families types and peoples relationships.
+  I have only blurred image in my head but I am sure I will figure something out :wink:.
+
 # Conclusions
+
+I said it before and I say it again: writing software for yourself and **using** it is an amazing feeling.
+I like the result, I like how it grows, I like the fact that I am using it.
+
+Rendering people relationships is a hard task and there is no way to implement it correctly or perfectly.
+Every feature has its tradeoffs and limitations.
+
+I learned a lot about graphs algorithms and coordinates assignment algorithms.
+I significantly improved my skills.
+The first steps during implementation were super slow and uncertain.
+Besides its huge usefulness in my genealogy research, the Grafily is also a great exercise of my programming skills.
 
 # References
 
 1. GitHub release [github/TheBestTvarynka/grafily/v.0.3.0](https://github.com/TheBestTvarynka/grafily/releases/tag/v.0.3.0).
+2. [Drawing Genealogy Graphs. Part 1: Tree Drawing Using Reingold-Tilford Algorithm](https://tbt.qkation.com/posts/draw-tree-using-reingold-tilford-algorithm/).
+3. [github/dagrejs/dagre/wiki#recommended-reading](https://github.com/dagrejs/dagre/wiki#recommended-reading).
