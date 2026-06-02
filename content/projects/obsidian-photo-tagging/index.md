@@ -24,7 +24,7 @@ I store my genealogy research data inside the Obsidian vault.
 Its structure assumes that I have one page per person.
 When I got a lot of old photos from many relatives, I started thinking about how to store them.
 Obviously, I cannot group them by person because there are many photos with many people in them.
-After a bit of thinking and visualizing :face_in_clouds: :monocle_face:, I realized that the best solution for me would be to show on a person's page all the photos they currently have.
+After a bit of thinking and visualizing :face_in_clouds: :monocle_face:, I realized that the best solution for me would be to show all the photos they currently have on a person's page.
 
 # The solution
 
@@ -94,7 +94,7 @@ I still have a few improvements in mind:
   I plan to make it more user-friendly.
 - **Automatic connections updates.** Catch when a photo is deleted/renamed/moved, and automatically update the connections in the internal `.json` file.
 - **Photo explorer?** I am not sure what this feature should look like, and even if it's worth implementing.
-  But time to time I am thinking about a generic photo explorer: a special page, where the user will be able query photos by different combinations of selectors (like hash tags + persons, AND and OR operations in the query).
+  But from time to time, I am thinking about a generic photo explorer: a special page where the user can query photos using different combinations of selectors (like hashtags + people, AND and OR operations in the query).
   The future will show me the right path. :relieved:
 
 # Useful links
