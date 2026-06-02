@@ -1,5 +1,5 @@
 +++
-title = "dataans"
+title = "Dataans"
 description = "Take notes in MD snippets grouped into spaces. Local-first, multi-device synchronization, drop-down mode. Made with :sparkling_heart: by `TheBestTvarynka` for `TheBestTvarynka`."
 date = 2024-10-19
 draft = false
