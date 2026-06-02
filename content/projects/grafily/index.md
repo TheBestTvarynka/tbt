@@ -1,17 +1,17 @@
 +++
 title = "Grafily"
-description = "Obsidian plugin for rendering pretty family graphs (family trees)"
+description = "Obsidian plugin for rendering pretty family graphs (family trees)."
 date = 2026-01-01
 draft = false
 template = "post.html"
 
 [taxonomies]
-tags = ["javascript", "typescript", "project", "react", "algorithms", "data-structures"]
+tags = ["javascript", "typescript", "project", "react", "frontend", "algorithms", "data-structures"]
 
 [extra]
 toc = true
-keywords = "TypeScript, Graphs, Algorithms"
-thumbnail = "grafily-project-thumbnail.png"
+keywords = "TypeScript, Graphs, Algorithms, Obsidian, Plugin, Genealogy"
+thumbnail = "grafily-thumbnail.png"
 enddate = "present"
 status = "development"
 +++
