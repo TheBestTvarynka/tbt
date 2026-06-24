@@ -73,7 +73,9 @@ This Template can also be used as the rendering template for Sections, eg: examp
         {%- endfor %}
       {%- else %}
         {%- for year, posts in section_item.pages | group_by(attribute="year") %}
-          <div class="project-group project-group-finished" style="margin-bottom: 1em;">
+          {%- set year_key = "" ~ year %}
+          {%- set border_color = section_item.extra.year_colors[year_key] | default(value="transparent") %}
+          <div class="project-group" style="border-left: 5px solid {{ border_color }}; margin-bottom: 1em;">
             {%- if not hide_section_dates %}
               {%- if section_item.title %}
                 <h3>{{ year }}</h3>
