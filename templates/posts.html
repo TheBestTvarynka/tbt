@@ -55,35 +55,39 @@ This Template can also be used as the rendering template for Sections, eg: examp
     {%- endif %}
     <div>
       {%- if section_item.title %}
-      <h2>{{ section_item.title }}</h2>
+        <h2>{{ section_item.title }}</h2>
       {%- endif %}
       {{- section_item.content | safe }}
       {%- if config.extra.archive_reverse %}
-      {%- for year, posts in section_item.pages | sort(attribute="year") | reverse | group_by(attribute="year") %}
-      {%- if not hide_section_dates %}
-      {%- if section_item.title %}
-      <h3 class="tpad">{{ year }}</h3>
+        {%- for year, posts in section_item.pages | sort(attribute="year") | reverse | group_by(attribute="year") %}
+          {%- if not hide_section_dates %}
+            {%- if section_item.title %}
+              <h3 class="tpad">{{ year }}</h3>
+            {%- else %}
+              <h2 class="tpad">{{ year }}</h2>
+            {%- endif %}
+          {%- endif %}
+          {%- for post in posts %}
+            <p><a href="{{ post.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ post.title }}</a>{%- if not hide_section_dates %} - <time datetime="{{ post.date }}">{{ post.date | date(format="%F") }}</time>{%- endif %}</p>
+          {%- endfor %}
+        {%- endfor %}
       {%- else %}
-      <h2 class="tpad">{{ year }}</h2>
-      {%- endif %}
-      {%- endif %}
-      {%- for post in posts %}
-      <p><a href="{{ post.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ post.title }}</a>{%- if not hide_section_dates %} - <time datetime="{{ post.date }}">{{ post.date | date(format="%F") }}</time>{%- endif %}</p>
-      {%- endfor %}
-      {%- endfor %}
-      {%- else %}
-      {%- for year, posts in section_item.pages | group_by(attribute="year") %}
-      {%- if not hide_section_dates %}
-      {%- if section_item.title %}
-      <h3 class="tpad">{{ year }}</h3>
-      {%- else %}
-      <h2 class="tpad">{{ year }}</h2>
-      {%- endif %}
-      {%- endif %}
-      {%- for post in posts %}
-      <p><a href="{{ post.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ post.title }}</a>{%- if not hide_section_dates %} - <time datetime="{{ post.date }}">{{ post.date | date(format="%F") }}</time>{%- endif %}</p>
-      {%- endfor %}
-      {%- endfor %}
+        {%- for year, posts in section_item.pages | group_by(attribute="year") %}
+          {%- set year_key = "" ~ year %}
+          {%- set border_color = section_item.extra.year_colors[year_key] | default(value="transparent") %}
+          <div class="project-group" style="border-left: 5px solid {{ border_color }}; margin-bottom: 1em;">
+            {%- if not hide_section_dates %}
+              {%- if section_item.title %}
+                <h3>{{ year }}</h3>
+              {%- else %}
+                <h2>{{ year }}</h2>
+              {%- endif %}
+            {%- endif %}
+            {%- for post in posts %}
+              <p><a href="{{ post.permalink | safe }}{%- if uglyurls %}index.html{%- endif %}">{{ post.title }}</a>{%- if not hide_section_dates %} - <time datetime="{{ post.date }}">{{ post.date | date(format="%F") }}</time>{%- endif %}</p>
+            {%- endfor %}
+          </div>
+        {%- endfor %}
       {%- endif %}
     </div>
 {%- endblock content %}
