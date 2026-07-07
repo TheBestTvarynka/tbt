@@ -37,29 +37,30 @@ I have worked with plenty of things. There is no point in listing all of them.
 Below, I have listed the technologies I am the most experienced with and the most interested in.
 
 ![Rust](https://img.shields.io/badge/-Rust-5c1e0f?style=flat-square&logo=Rust)
-![C](https://img.shields.io/badge/-C-5c1e0f?style=flat-square&logo=C)
-![JavaScript](https://img.shields.io/badge/-JavaScript-black?style=flat-square&logo=javascript)
-![TypeScript](https://img.shields.io/badge/-TypeScript-black?style=flat-square&logo=typescript)
+![C](https://img.shields.io/badge/-C-2f305c?style=flat-square&logo=C)
+![JavaScript](https://img.shields.io/badge/-JavaScript-302d19?style=flat-square&logo=javascript)
+![TypeScript](https://img.shields.io/badge/-TypeScript-1f2b3d?style=flat-square&logo=typescript)
 
 ![Linux](https://img.shields.io/badge/-Linux-0f331b?style=flat-square&logo=Linux)
-(![ArchLinux](https://img.shields.io/badge/-I%20use%20Arch,%20btw-black?style=flat-square&logo=archlinux))
-![Windows](https://img.shields.io/badge/-Windows-black?style=flat-square&logo=windows)
-![Nodejs](https://img.shields.io/badge/-Nodejs-black?style=flat-square&logo=Node.js)
-![WebAssembly](https://img.shields.io/badge/-WebAssembly-black?style=flat-square&logo=webassembly)
+![ArchLinux](https://img.shields.io/badge/-(I%20use%20Arch,%20btw)-192030?style=flat-square&logo=archlinux)
+![Windows](https://img.shields.io/badge/-Windows-18403e?style=flat-square&logo=windows)
+![Nodejs](https://img.shields.io/badge/-Nodejs-12301f?style=flat-square&logo=Node.js)
+![WebAssembly](https://img.shields.io/badge/-WebAssembly-231930?style=flat-square&logo=webassembly)
 
-![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-black?style=flat-square&logo=postgresql)
-![Redis](https://img.shields.io/badge/-Redis-black?style=flat-square&logo=Redis)
+![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-1d1c3b?style=flat-square&logo=postgresql)
+![Redis](https://img.shields.io/badge/-Redis-33241f?style=flat-square&logo=Redis)
 
-![Cloudflare](https://img.shields.io/badge/-Cloudflare-black?style=flat-square&logo=cloudflare)
-![Google Cloud](https://img.shields.io/badge/Google%20Cloud-black?style=flat-square&logo=google-cloud)
-![Docker](https://img.shields.io/badge/-Docker-black?style=flat-square&logo=docker)
-![Git](https://img.shields.io/badge/-Git-black?style=flat-square&logo=git)
-![GitHub Actions](https://img.shields.io/badge/-GitHub%20Actions-black?style=flat-square&logo=github)
-![GitLab CI/CD](https://img.shields.io/badge/-GitLab%20CI/CD-black?style=flat-square&logo=gitlab)
+![Cloudflare](https://img.shields.io/badge/-Cloudflare-302f12?style=flat-square&logo=cloudflare)
+![Google Cloud](https://img.shields.io/badge/Google%20Cloud-163240?style=flat-square&logo=google-cloud)
+![Docker](https://img.shields.io/badge/-Docker-121730?style=flat-square&logo=docker)
+![Git](https://img.shields.io/badge/-Git-3d1e15?style=flat-square&logo=git)
+![GitHub Actions](https://img.shields.io/badge/-GitHub%20Actions-27153d?style=flat-square&logo=github)
+![GitLab CI/CD](https://img.shields.io/badge/-GitLab%20CI/CD-301a12?style=flat-square&logo=gitlab)
 
 ## :teddy_bear: Fun
 
-[![Lichess](https://img.shields.io/badge/-Lichess-black?style=flat-square&logo=lichess)](https://lichess.org/@/TheBestTvarynka)
-[![Spotify](https://img.shields.io/badge/-Spotify-black?style=flat-square&logo=spotify)](https://open.spotify.com/user/xrebaxp1ppqe0byob8r94emqv)
+[![Lichess](https://img.shields.io/badge/-Lichess-331d14?style=flat-square&logo=lichess)](https://lichess.org/@/TheBestTvarynka)
+[![spotify](https://img.shields.io/badge/-Spotify-193814?style=flat-square&logo=spotify)](https://open.spotify.com/user/xrebaxp1ppqe0byob8r94emqv)
+[![LeetCode](https://img.shields.io/badge/-LeetCode-151f2e?style=flat-square&logo=leetcode)](https://leetcode.com/u/TheBestTvarynka/)
 
 This site is licensed under the [MIT license](https://github.com/TheBestTvarynka/tbt/blob/main/LICENSE).
