@@ -48,7 +48,7 @@ Below, I have listed the technologies I am the most experienced with and the mos
 ![WebAssembly](https://img.shields.io/badge/-WebAssembly-231930?style=flat-square&logo=webassembly)
 
 ![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-1d1c3b?style=flat-square&logo=postgresql)
-![Redis](https://img.shields.io/badge/-Redis-33241f?style=flat-square&logo=Redis)
+![SQLite](https://img.shields.io/badge/-SQLite-475c5a?style=flat-square&logo=SQLite)
 
 ![Cloudflare](https://img.shields.io/badge/-Cloudflare-302f12?style=flat-square&logo=cloudflare)
 ![Google Cloud](https://img.shields.io/badge/Google%20Cloud-163240?style=flat-square&logo=google-cloud)
