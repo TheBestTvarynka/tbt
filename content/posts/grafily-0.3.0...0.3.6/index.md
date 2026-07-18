@@ -121,6 +121,26 @@ PRs:
 
 - [feat: show/hide siblings node](https://github.com/TheBestTvarynka/grafily/pull/34).
 - [fix(layout): full graph: children node inserting](https://github.com/TheBestTvarynka/grafily/pull/40).
+- [feat: now the user can open the person from side panel](https://github.com/TheBestTvarynka/grafily/pull/48).
+
+# Navigation buttons
+
+I was tired of opening a plugin, typing the person name, and pressing all that buttons.
+Often I want to just build a relationships graph of the current person.
+I created a simple but very conveniet way of building graphs.
+
+Now the Grafily plugin supports the `grafily-navigation` code block.
+It will be rendered as two buttons for quick and easy graph building:
+
+![](https://raw.githubusercontent.com/TheBestTvarynka/grafily/d3dc201372e1d17a20c83a952c0e958cdd2c5ccb/doc/images/grafily-navigation-buttons.png)
+
+The left button opens the family tree of the current person (`Reingold-Tilford` layout). The right button opens the graph explorer with the starting person as the current person (`Brandes-Köpf` layout). Example:
+
+![](https://raw.githubusercontent.com/TheBestTvarynka/grafily/d3dc201372e1d17a20c83a952c0e958cdd2c5ccb/doc/images/grafily-navigation-showcase.gif)
+
+PRs:
+
+- [feat: implement buttons for opening the plugin for specific person](https://github.com/TheBestTvarynka/grafily/pull/49).
 
 # UI/UX improvements
 
@@ -142,6 +162,31 @@ Now, when you have an unsaved changes, the app will ask you for the confirmation
 
 ![](./confirmation.png)
 
+## Edges styling
+
+- [feat: improve edges styling](https://github.com/TheBestTvarynka/grafily/pull/47).
+
+| Before | After |
+|-|-|
+| ![](https://raw.githubusercontent.com/TheBestTvarynka/grafily/96b65e62e0ace284a3727ca7400cd795bd1cd02b/public/graph_demo.png) | ![](https://raw.githubusercontent.com/TheBestTvarynka/grafily/d3dc201372e1d17a20c83a952c0e958cdd2c5ccb/public/graph_demo.png) |
+
+I bet you can see the difference.
+The fun part is that I did not implement a new edge type.
+It was available all the time.
+I _just_ figured out a way of how to set node handle correctly, so the edge is in the middle of the vertical space between nodes.
+
+## Dynamic tab title
+
+- [feat(ui): dynamic tab title](https://github.com/TheBestTvarynka/grafily/pull/51).
+
+It is not helpful at all when you have many opened tabs named `Grafily`.
+Now the Grafily plugin tab changes depending on what graph you build.
+
+- When the user opens the start-up menu, the tab title is the same - `Grafily`.
+- When the user opens a saved graph or saves the unsaved graph, the tab name is a graph name.
+- When the user builds a new graph, the tab name is `<person's name> - <layout friendly name>`.
+  For example, `Myroniuk Pavlo - Family tree` or `Myroniuk Pavlo - Family explorer`.
+
 ## Reorder side panel buttons
 
 - [ feat: reorder buttons on SidePanel](https://github.com/TheBestTvarynka/grafily/pull/45).
@@ -157,7 +202,11 @@ Further experience will show the right path.
 
 ## Autoselect the starting person
 
+- [feat: autoselect and automatically center the starting node](https://github.com/TheBestTvarynka/grafily/pull/46).
 
+That's a small iprovement but still worth mentioning because it's so useful.
+Before building the graph, the user must select a starting person.
+Now when the graph is built, the starting person is automatically selected and graph is centered so this person is at the center of the screen.
 
 # Bugfixes
 
@@ -187,8 +236,10 @@ It was leftover from the initial layout implementation.
 When you swap spouses and expand their parent, then spouses parents may be in wrong order.
 One function relied on the spouses order from the index instead of taking it from the layout object.
 
+- [fix(ui): now background pattern present on each grafily tab](https://github.com/TheBestTvarynka/grafily/pull/50).
 
-#29,31,34
+Previously, when you have two plugin tabs opened, only fir first one had background dots.
+It was fixed by assigning a unique ID to the each `ReactFlow` component.
 
 # References
 
