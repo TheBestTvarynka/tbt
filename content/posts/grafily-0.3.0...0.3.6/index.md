@@ -241,6 +241,21 @@ One function relied on the spouses order from the index instead of taking it fro
 Previously, when you have two plugin tabs opened, only fir first one had background dots.
 It was fixed by assigning a unique ID to the each `ReactFlow` component.
 
+# Conclusions
+
+I said it before, and I say it again: writing software for yourself and using it is an amazing feeling. I like the result, I like how it grows, I like the fact that I am using it.
+
+Currently, the plugin as goog as I wanted it to be.
+The only thing I wish was better is node positioning algorithm.
+I often see situations when children nodes are not centered relatively its parent node.
+I do not mean a small shift.
+I mean a huge misalighning.
+My internal engineer says to create my own node positioning algorithm for that specific case, but I am not sure it is worth the trouble and if I even able to do that.
+
+And while I am writing this post hiding in the shelter from russian missiles attacking my city, please, consider helping Ukraine fighting the evil.
+
+[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://stand-with-ukraine.pp.ua/)
+
 # References
 
 * [Grafily - Obsidian Community](https://community.obsidian.md/plugins/grafily).
