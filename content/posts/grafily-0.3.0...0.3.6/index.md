@@ -3,16 +3,15 @@ title = "Grafily improvements 0.3.0...0.3.6"
 date = 2026-07-18
 draft = false
 template = "post.html"
-description = "Obsidian plugin for rendering pretty family graphs (family trees)"
+description = "Describes all the interesting features and fixes since [0.3.0](https://github.com/TheBestTvarynka/grafily/releases/tag/0.3.0) (with examples, of course)."
 
 [taxonomies]
-tags = ["javascript", "typescript", "project", "react", "algorithms", "data-structures"]
+tags = ["javascript", "typescript", "project", "react", "algorithms", "data-structures", "obsidian"]
 
 [extra]
-keywords = "TypeScript, Graphs, Algorithms"
+keywords = "TypeScript, Graphs, Obsidian"
 toc = true
-# mermaid = true
-# thumbnail = "grafily-thumbnail.png"
+thumbnail = "thumbnail-grafily-0-3-0-0-3-6.png"
 +++
 
 And while I am writing this post hiding in the shelter from russian missiles attacking my city, please, consider helping Ukraine fighting the evil.
