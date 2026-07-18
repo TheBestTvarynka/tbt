@@ -1,6 +1,6 @@
 +++
 title = "Grafily improvements 0.3.0...0.3.6"
-date = 2026-07-19
+date = 2026-07-18
 draft = false
 template = "post.html"
 description = "Obsidian plugin for rendering pretty family graphs (family trees)"
@@ -14,6 +14,12 @@ toc = true
 # mermaid = true
 # thumbnail = "grafily-thumbnail.png"
 +++
+
+And while I am writing this post hiding in the shelter from russian missiles attacking my city, please, consider helping Ukraine fighting the evil.
+
+[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://stand-with-ukraine.pp.ua/)
+
+During the night from July 19 to 20 2026, russia has fired the most ballistic missiles at Kyiv since the start of the war (> 40 missiles).
 
 # Intro
 
@@ -251,10 +257,6 @@ I often see situations when children nodes are not centered relatively its paren
 I do not mean a small shift.
 I mean a huge misalighning.
 My internal engineer says to create my own node positioning algorithm for that specific case, but I am not sure it is worth the trouble and if I even able to do that.
-
-And while I am writing this post hiding in the shelter from russian missiles attacking my city, please, consider helping Ukraine fighting the evil.
-
-[![Stand With Ukraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://stand-with-ukraine.pp.ua/)
 
 # References
 
