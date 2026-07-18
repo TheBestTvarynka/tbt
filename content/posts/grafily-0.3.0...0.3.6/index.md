@@ -144,6 +144,19 @@ Now, when you have an unsaved changes, the app will ask you for the confirmation
 
 ## Reorder side panel buttons
 
+- [ feat: reorder buttons on SidePanel](https://github.com/TheBestTvarynka/grafily/pull/45).
+
+It's easier to see in comparison:
+
+| Before | After |
+|-|-|
+| ![](./side-panel.png) | ![](./side-panel-after.png) |
+
+I still do not think that the current button order is perfect but it 100% better then before.
+Further experience will show the right path.
+
+## Autoselect the starting person
+
 
 
 # Bugfixes
