@@ -131,7 +131,7 @@ PRs:
 # Navigation buttons
 
 I was tired of opening a plugin, typing the person's name, and pressing all those buttons.
-Often, I want to just build a relationship graph of the current person.
+Often, I just want to build a relationship graph for the current person.
 I created a simple yet very convenient way to build graphs.
 
 The Grafily plugin now supports the `grafily-navigation` code block.
@@ -139,7 +139,7 @@ It will be rendered as two buttons for quick and easy graph building:
 
 ![](https://raw.githubusercontent.com/TheBestTvarynka/grafily/d3dc201372e1d17a20c83a952c0e958cdd2c5ccb/doc/images/grafily-navigation-buttons.png)
 
-The left button opens the family tree of the current person (`Reingold-Tilford` layout). The right button opens the graph explorer with the starting person as the current person (`Brandes-Köpf` layout). Example:
+The left button opens the family tree of the current person (`Reingold-Tilford` layout). The right button opens the graph explorer, making the starting person the current person (`Brandes-Köpf` layout). Example:
 
 ![](https://raw.githubusercontent.com/TheBestTvarynka/grafily/d3dc201372e1d17a20c83a952c0e958cdd2c5ccb/doc/images/grafily-navigation-showcase.gif)
 
@@ -217,7 +217,7 @@ Now, when the graph is built, the starting person is automatically selected, and
 
 - [fix: start up menu: show the menu even when the index is empty](https://github.com/TheBestTvarynka/grafily/pull/29).
 
-Previously, when the user did not have any persons in the vault, the plugin failed to show the start-up menu.
+Previously, when the user had no people in the vault, the plugin failed to display the start-up menu.
 It is not incorrect, but rather confusing.
 
 - [fix(ui): do not render marriage node button if marriage has no children](https://github.com/TheBestTvarynka/grafily/pull/39).
