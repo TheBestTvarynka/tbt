@@ -22,7 +22,7 @@ During the night from July 18 to 19, 2026, russia has fired the most ballistic m
 
 # Intro
 
-Here we go again :wink:. Since [May 09](https://github.com/TheBestTvarynka/grafily/commit/96b65e6), I have implemented new features, fixed many bugs, and polished the plugin extensively.
+Here we go again :wink:. Since [May 09](https://github.com/TheBestTvarynka/grafily/commit/96b65e6), I have implemented new features, fixed many bugs, and extensively polished the plugin.
 Now I use Grafily for my genealogy research on a regular basis.
 I already copied all people and their relationships into Obsidian, and I can successfully view family graphs of any kind and complexity.
 
@@ -61,7 +61,7 @@ But you can notice small differences in UI/UX and button placements.
 First of all, I submitted the Grafily plugin to the Obsidian Community Plugins.
 Here is the official plugin page: [community.obsidian.md/plugins/grafily](https://community.obsidian.md/plugins/grafily).
 Now you do not need to build it from source or download and install the release assets from GitHub.
-Now you are able to simply install it from the Obsidian app.
+You can now simply install it from the Obsidian app.
 
 As I expected, the submission process was kinda annoying because their automated checker constantly failed my releases.
 Here are some of the errors:
@@ -255,7 +255,7 @@ The only thing I wish were better is the node positioning algorithm.
 I often see situations when child nodes are not centered relative to their parent node.
 I do not mean a small shift.
 I mean a huge misalignment.
-My internal engineer says to create my own node positioning algorithm for that specific case, but I am not sure it is worth the trouble and if I am even able to do that.
+My internal engineer says to create my own node-positioning algorithm for that specific case, but I am not sure it is worth the trouble or whether I am even able to do that.
 
 # References
 
