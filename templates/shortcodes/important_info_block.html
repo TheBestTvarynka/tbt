@@ -1,0 +1,11 @@
+<div class="markdown-alert markdown-alert-important">
+  <p class="markdown-alert-title">
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.15"></circle>
+      <rect x="7.25" y="3.5" width="1.5" height="6" rx="0.75" fill="currentColor"></rect>
+      <circle cx="8" cy="11.5" r="0.9" fill="currentColor"></circle>
+    </svg>
+    Important
+  </p>
+  {{ body | markdown(inline=true) | safe }}
+</div>

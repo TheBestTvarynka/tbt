@@ -31,6 +31,10 @@ This Template can also be used directly for the index eg: example.com/ or as the
 {%- endblock seo %}
 
 {%- block content %}
+    {% important_info_block() %}
+    _**All content is handwritten. No posts are AI-generated. I use an AI assistant only for spelling and punctuation corrections.**_
+    {% end %}
+
     <div>
     {%- for page in paginator.pages %}
       <article>

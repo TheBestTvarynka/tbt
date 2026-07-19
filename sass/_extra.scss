@@ -49,3 +49,27 @@
 .project-dates {
   opacity: 0.8;
 }
+
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  border-left: 4px solid rgb(149, 88, 216);
+  border-radius: 4px;
+  background: var(--c2);
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+.markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: bold;
+  color: rgb(149, 88, 216);
+
+  svg {
+    flex-shrink: 0;
+  }
+}

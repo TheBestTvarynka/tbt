@@ -24,6 +24,10 @@ I didn't set a purpose to tell you everything I know. My motivation is to tell a
 
 If you enjoy my articles and consider them useful, follow me on [GitHub](https://github.com/TheBestTvarynka) and star the corresponding repo.
 
+{% important_info_block() %}
+_**All content is handwritten. No posts are AI-generated. I use an AI assistant only for spelling and punctuation corrections.**_
+{% end %}
+
 ## :see_no_evil: About me
 
 * :computer: [I force electrons to do the math](https://www.reddit.com/r/ProgrammerHumor/comments/jf95z8/the_best_ways_to_describe_the_job) :muscle:
