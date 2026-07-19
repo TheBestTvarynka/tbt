@@ -149,6 +149,19 @@ PRs:
 
 # UI/UX improvements
 
+## Edges styling
+
+- [feat: improve edges styling](https://github.com/TheBestTvarynka/grafily/pull/47).
+
+| Before | After |
+|-|-|
+| ![](https://raw.githubusercontent.com/TheBestTvarynka/grafily/96b65e62e0ace284a3727ca7400cd795bd1cd02b/public/graph_demo.png) | ![](https://raw.githubusercontent.com/TheBestTvarynka/grafily/d3dc201372e1d17a20c83a952c0e958cdd2c5ccb/public/graph_demo.png) |
+
+I bet you can see the difference.
+The fun part is that I did not implement a new edge type.
+It was available all the time.
+I _just_ figured out a way to set the node handle correctly, so the edge is in the middle of the vertical space between nodes.
+
 ## Unsaved changes detection
 
 - [feat: implement unsaved data detection and add confirmation modal](https://github.com/TheBestTvarynka/grafily/pull/36).
@@ -166,19 +179,6 @@ But I did not expect that it would happen so often and be so annoying!
 Now, when you have unsaved changes, the app will ask you for confirmation when you try to return to the start-up menu without saving:
 
 ![](./confirmation.png)
-
-## Edges styling
-
-- [feat: improve edges styling](https://github.com/TheBestTvarynka/grafily/pull/47).
-
-| Before | After |
-|-|-|
-| ![](https://raw.githubusercontent.com/TheBestTvarynka/grafily/96b65e62e0ace284a3727ca7400cd795bd1cd02b/public/graph_demo.png) | ![](https://raw.githubusercontent.com/TheBestTvarynka/grafily/d3dc201372e1d17a20c83a952c0e958cdd2c5ccb/public/graph_demo.png) |
-
-I bet you can see the difference.
-The fun part is that I did not implement a new edge type.
-It was available all the time.
-I _just_ figured out a way to set the node handle correctly, so the edge is in the middle of the vertical space between nodes.
 
 ## Dynamic tab title
 
@@ -254,7 +254,10 @@ Currently, the plugin is as good as I wanted it to be.
 The only thing I wish were better is the node positioning algorithm.
 I often see situations when child nodes are not centered relative to their parent node.
 I do not mean a small shift.
-I mean a huge misalignment.
+I mean a huge misalignment:
+
+![](./misalignment.png)
+
 My internal engineer says to create my own node-positioning algorithm for that specific case, but I am not sure it is worth the trouble or whether I am even able to do that.
 
 # References
