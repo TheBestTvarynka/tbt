@@ -1,0 +1,2 @@
+{% import "macros/alerts.html" as alerts %}
+{{ alerts::important(content=body | markdown(inline=true)) }}

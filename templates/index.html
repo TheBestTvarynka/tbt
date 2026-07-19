@@ -4,6 +4,7 @@ This Template can also be used directly for the index eg: example.com/ or as the
 #}
 
 {%- extends "base.html" %}
+{%- import "macros/alerts.html" as alerts %}
 {%- set uglyurls = config.extra.uglyurls | default(value=false) -%}
 {%- if config.extra.search_library %}{%- if config.extra.search_library == "offline" %}{% set uglyurls = true %}{% endif %}{% endif %}
 
@@ -32,6 +33,8 @@ This Template can also be used directly for the index eg: example.com/ or as the
 
 {%- block content %}
     <div>
+    {{ alerts::important(content="_**All content is handwritten. No posts are AI-generated. I use an AI assistant only for spelling and punctuation corrections.** For more details, see the [AI Policy](/ai-policy)._" | markdown(inline=true)) }}
+
     {%- for page in paginator.pages %}
       <article>
         {{- macros::title_index(page=page, config=config) }}
