@@ -1,6 +1,6 @@
 +++
 title = "Grafily improvements 0.3.0...0.3.6"
-date = 2026-07-18
+date = 2026-07-19
 draft = false
 template = "post.html"
 description = "Describes all the interesting features and fixes since [0.3.0](https://github.com/TheBestTvarynka/grafily/releases/tag/0.3.0) (with examples, of course)."
