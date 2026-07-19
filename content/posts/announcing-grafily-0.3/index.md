@@ -6,10 +6,10 @@ template = "post.html"
 description = "Obsidian plugin for rendering pretty family graphs (family trees)"
 
 [taxonomies]
-tags = ["javascript", "typescript", "project", "react", "algorithms", "data-structures"]
+tags = ["javascript", "typescript", "project", "react", "algorithms", "data-structures", "obsidian"]
 
 [extra]
-keywords = "TypeScript, Graphs, Algorithms"
+keywords = "TypeScript, Graphs, Algorithms, Obsidian"
 toc = true
 mermaid = true
 thumbnail = "grafily-thumbnail.png"
