@@ -11,3 +11,9 @@
   {{ content | safe }}
 </div>
 {% endmacro important %}
+
+{% macro note(content) %}
+<div class="markdown-alert markdown-alert-note">
+  {{ content | safe }}
+</div>
+{% endmacro note %}

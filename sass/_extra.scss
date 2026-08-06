@@ -53,7 +53,7 @@
 .markdown-alert {
   padding: 0.5rem 1rem;
   margin: 1rem 0;
-  border-left: 4px solid rgb(149, 88, 216);
+  border-left: 4px solid;
   border-radius: 4px;
   background: var(--c2);
 
@@ -67,9 +67,29 @@
   align-items: center;
   gap: 0.4rem;
   font-weight: bold;
-  color: rgb(149, 88, 216);
 
   svg {
     flex-shrink: 0;
   }
+}
+
+.markdown-alert-important {
+  border-left-color: rgb(149, 88, 216);
+
+  .markdown-alert-title {
+    color: rgb(149, 88, 216);
+  }
+}
+
+.markdown-alert-note {
+  border-left-color: rgb(88, 149, 216);
+
+  .markdown-alert-title {
+    color: rgb(88, 149, 216);
+  }
+}
+
+.img-scale-50 {
+  width: 50%;
+  height: auto;
 }
