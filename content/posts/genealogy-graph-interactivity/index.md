@@ -46,9 +46,10 @@ Both of them are just nodes.
 If you say that **genealogy graph** is a graph that represents family relationships, ancestors, descendants, etc, then you will be 100% correct.
 What properties such a graph has?
 
-1. Every node have at most two parent nodes. Every node can have any number of children.
+1. Every node has at most two parent nodes. Every node can have any number of children.
 2. Horizontally, all nodes are split into layers. Every node has a layer.
-3. Every edge connects two nodes of adjacent levels. That's not true for all cases, but I do not plan to support even in the future.
+3. Every edge connects two nodes of adjacent layers.
+   That's not true for all cases, but I do not plan to support even in the future.
 4. Edges are not crossing - this constraint is added by me.
 
 The last property is not true by default.
@@ -58,11 +59,32 @@ In some cases it's just not possible to render all nodes without edges crossing.
 But keep in mind that I do not set a purpose to render all persons at the same time.
 My goal is to give the user an ability to construct any graph they have in mind.
 So, that okay if I forbid edges crossing.
-Interactivity solves this limitation perfectly.
+Interactivity solves this limitation perfectly :wink:.
 
 # What is interactivity?
 
+In general terms, interactivity is the ability to interact or to communicate with a system.
+The user can do some actions to the system and it will respond accordingly.
+But what does it mean for the genealogy graph?
 
+I define genealogy graph interactivity as a set of actions that allow the user to edit the graph as they want.
+It includes:
+
+* Building the initial graph starting from the selected person.
+  {{ img(src="initial-graph.png" alt="Initial graph")}}
+* Removing (collapsing) any parents/children from the graph.
+  {{ img(src="nodes-collapsing.png" alt="Collapsed nodes")}}
+* Adding (expanding) person parents or marriage children.
+  {{ img(src="nodes-expanding.png" alt="Nodes expanding")}}
+* Ability to swap spouses inside the marriage.
+  {{ img(src="swapped-spouses.png" alt="Swapped spouses")}}
+* Ability to rearrange siblings of the marriage.
+  {{ img(src="siblings-rearrangement.png" alt="Siblings rearrangement")}}
+
+The set of actions defined above allow us to build a genealogy graph of any complexity.
+In the following sections I explain how every of these actions work, what drawbacks and constraints I put on them and why.
+
+# 
 
 # Conclusions
 

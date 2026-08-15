@@ -74,7 +74,9 @@ I would rather keep the app simple than unreasonably complex.
 
 # Features
 
-<sup><sub>All persons in demo screenshots below are generated using AI. If you find any coincidences with real people, please contact me, and I will fix them.</sub></sup>
+{% note_info_block() %}
+All persons below are generated using AI. If you find any coincidences with real people, please contact me, and I will fix them.
+{% end %}
 
 - **Start-up menu.** The start-up menu shows when the user opens the plugin.
   It allows the user to either load a saved graph or set parameters and generate a new one.
