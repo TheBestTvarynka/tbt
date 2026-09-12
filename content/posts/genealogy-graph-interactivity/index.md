@@ -84,10 +84,75 @@ It includes:
 The set of actions defined above allow us to build a genealogy graph of any complexity.
 In the following sections I explain how every of these actions work, what drawbacks and constraints I put on them and why.
 
-# 
+# Interactivity explained
+
+## Nodes adding
+
+I am going to start from nodes adding because this part is the most interesting and the most complicated one.
+Lets run through a few examples of possible cases.
+After that I will describe the final algorithm.
+
+Look at the graph below. Where should we insert parents of Adam Crosby?
+
+{{ img(src="adam-crosby.png" alt="adam-crosby.png")}}
+
+Obviously, right after the parents of Karen Crosby.
+Okay, let's take something more difficult.
+Where should we insert parents of Nancy Mondor?
+
+{{ img(src="nancy-mondor.png" alt="nancy-mondor.png")}}
+
+Apparently, we have two option: insert parent nodes between Elizabeth and Arthur or between Helen and Richard.
+What should we choose?
+Our intuition says to choose the second option.
+Okay, what if I change the graph a bit: I will add Arthur and Helen children to the graph.
+
+{{ img(src="nancy-mondor-2.png" alt="nancy-mondor-2.png")}}
+
+Now we have only one option: between Elizabeth and Arthur.
+
+How the algorithm decide where to insert parent nodes?
+What if parents also have their own parents, should we add them too?
+So many options and possibilities :face_with_spiral_eyes:
+
+
+
+## Nodes rearrangement
+
+The hard thing was to decide what functionality to sacrifice in to simplify the development.
+In the end, nodes rearrangement is implemented very simply.
+
+{% note_info_block() %}
+When the user wants to swap spouses of the marriage, **parents of at most one spouse may be expanded** (can be present).
+{% end %}
+
+When both spouses have no parents or when only one of them has parents expanded, then swapping spouses is trivial - we can just swap nodes and call it a day.
+
+When both spouses have parents expanded, then it's not trivial.
+Because it is a graph, spouse parents can have many ancestors and that ancestors can have a lot of descendants.
+For instance, how would you swap Robert Mondor and Alica Mondor on the following graph?
+
+{{ img(src="complicated-spouses-swapping.png" alt="Complicated spouses swapping")}}
+
+To swap them, you would need to remove all nodes from the one side, swap spouses, and then insert all that nodes on the other side.
+I do not say that it is not possible, but I do say that it is too complicated.
+Even more, I can create an example where swapping spouses without a farther clarifications is impossible or at least would be unpredictable for the end user.
+
+A roughly the same situation with moving the sibling node to the left/right.
+We cannot swap two sibling nodes if both of them has descendants.
+Descendants sub-graphs can be too complicated to deal with. But it is easy and possible to swap two sibling nodes when no one or only one of them has descendant nodes.
+
+## Removing nodes
+
+Removing nodes is not hard: you ✨ _just_ ✨ recursively walk thought the graph and remove nodes from it.
 
 # Conclusions
 
+Often too much complicated algorithms not worth the gain.
+
+Often we should sacrifice some part of functionality to simplify the implementation ([_the worse-is-better_](https://www.dreamsongs.com/RiseOfWorseIsBetter.html)).
+
 # References
 
-1. 
+1. Implementation: [github/TheBestTvarynka/grafily/b8dc4e9331/src/layout/builder/index.ts](https://github.com/TheBestTvarynka/grafily/blob/b8dc4e93316f8b8bb2b51b9bf702634dc86b2936/src/layout/builder/index.ts).
+2. Try it yourself: [`GETTING_STARTED.md`](https://github.com/TheBestTvarynka/grafily/blob/master/doc/GETTING_STARTED.md).
