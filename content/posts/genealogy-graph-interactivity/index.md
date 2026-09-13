@@ -1,6 +1,6 @@
 +++
 title = "Drawing Genealogy Graphs. Part 2: Genealogy Graph Interactivity"
-date = 2026-08-16
+date = 2026-09-13
 draft = false
 template = "post.html"
 description = "This post describes a set of algorithms implemented inside the [Grafily](https://github.com/TheBestTvarynka/grafily/) plugin for building and dynamically altering genealogy graphs"
@@ -11,7 +11,7 @@ tags = ["algorithms", "data-structures", "typescript", "drawing-genealogy-graphs
 [extra]
 keywords = "Algorithm, Graphs, Data structures, Algorithms, Depth-first search, Graph building"
 toc = true
-thumbnail = "dgg1-thumbnail.png"
+thumbnail = "dgg2-thumbnail.png"
 +++
 
 # Intro
@@ -49,15 +49,15 @@ What properties does such a graph have?
 1. Every node has at most two parent nodes. Every node can have any number of children.
 2. Horizontally, all nodes are split into layers. Every node has a layer.
 3. Every edge connects two nodes of adjacent layers.
-   That's not true in all cases, but I don't plan to support it even in the future.
+   That's not true in all cases, but I don't plan to support it in the future either.
 4. Edges do not cross - this constraint is added by me.
 
 The last property is not true by default.
-If we try to include **all** people on the big-enough graph and render all of them at the same time, we will eventually have edges crossing.
+If we try to include **all** people on the big-enough graph and render them all at the same time, we will eventually have edges crossing.
 In some cases, it's just not possible to render all nodes without edges crossing.
 
-But keep in mind that I don't set out to render all nodes at the same time.
-My goal is to give the user the ability to construct any graph they have in mind.
+But keep in mind that I don't set out to render all nodes at once.
+My goal is to let the user construct any graph they have in mind.
 So, it is okay if I forbid edges crossing.
 Interactivity solves this limitation perfectly :wink:.
 
@@ -81,14 +81,14 @@ It includes:
 * Ability to rearrange siblings of the marriage.
   {{ img(src="siblings-rearrangement.png" alt="Siblings rearrangement")}}
 
-The set of actions defined above allows us to build a genealogy graph of any complexity.
-In the following sections, I explain how each of these actions works, what drawbacks and constraints I put on them, and why.
+The actions defined above let us build a genealogy graph of any complexity.
+In the following sections, I explain how each action works, what drawbacks and constraints I impose, and why.
 
 # Interactivity explained
 
 ## Nodes adding
 
-I am going to start with node adding because this part is the most interesting and the most complicated one.
+I'll start with node adding because it's the most interesting and most complicated part.
 Let's run through a few examples of possible cases.
 After that, I will describe the final algorithm.
 
@@ -126,9 +126,9 @@ Let's see possible options:
 {{ img(src="big-example-expanding-options.png" alt="big-example-expanding-options.png")}}
 
 Different options allow us to expand a different number of generations back.
-For example, option 1 allows us to add ancestors from only one generation back of the orange person.
-But options 2 and 3 allow us to add ancestors from two generations back of the orange node.
-The Grafily plugin always selects an option that allows expanding the largest number of generations.
+For example, option 1 lets us add ancestors from only one generation back from the orange person.
+But options 2 and 3 let us add ancestors from two generations back from the orange node.
+The Grafily plugin always selects the option that lets you expand the most generations.
 
 Internally, those options are called paths.
 A path is a _way_ between graph nodes through layers where we can insert nodes and be sure that we will not cause edges to cross.
@@ -143,11 +143,11 @@ Let's take another example:
 
 {{ img(src="big-example-inf.png" alt="big-example-inf.png")}}
 
-In the example above, the Grafily plugin will always choose the second path, because its length is ∞ (inf).
+In the example above, the Grafily plugin will always choose the second path because its length is ∞ (inf).
 We can add as many ancestors as we have (no limit).
 
 Want to know the best part about this approach?
-It forks perfectly for ancestors and as well for descendants!
+It forks perfectly for ancestors and for descendants as well!
 I wrote a generic implementation, so the same code works for expanding parent nodes and also child nodes too:
 
 * Longest path: [github/TheBestTvarynka/grafily/b8dc4e9331/src/layout/builder/index.ts#L197](https://github.com/TheBestTvarynka/grafily/blob/b8dc4e93316f8b8bb2b51b9bf702634dc86b2936/src/layout/builder/index.ts#L197).
@@ -155,8 +155,8 @@ I wrote a generic implementation, so the same code works for expanding parent no
 
 ## Nodes rearrangement
 
-The hard thing was to decide what functionality to sacrifice to simplify the development.
-In the end, node rearrangement is implemented very simply.
+The hard part was deciding what functionality to sacrifice to simplify development.
+In the end, I implemented node rearrangement very simply.
 
 {% note_info_block() %}
 When the user wants to swap spouses in a marriage, **parents of at most one spouse may be expanded** (and can be present).
@@ -174,13 +174,13 @@ To swap them, you would need to remove all nodes from one side, swap spouses, an
 I do not say that it is not possible, but I do say that it is too complicated.
 Even more, I can create an example where swapping spouses without further clarification is impossible or at least would be unpredictable for the end user.
 
-A roughly the same situation with moving the sibling node to the left/right.
+A roughly the same situation applies to moving the sibling node to the left/right.
 We cannot swap two sibling nodes if both of them have descendants.
-Descendant subgraphs can be too complicated to deal with. But it is easy and possible to swap two sibling nodes when neither or only one of them has descendant nodes.
+Descendant subgraphs can be too complicated to deal with. But it is easy and possible to swap two sibling nodes when neither, or only one, has descendant nodes.
 
 ## Removing nodes
 
-Removing nodes is not hard: you ✨ _just_ ✨ recursively walk through the graph and remove nodes from it.
+Removing nodes is not hard: you ✨ _just_ ✨ recursively walk through the graph and remove nodes.
 
 # Conclusions
 
