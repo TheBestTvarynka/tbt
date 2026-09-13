@@ -115,7 +115,43 @@ How the algorithm decide where to insert parent nodes?
 What if parents also have their own parents, should we add them too?
 So many options and possibilities :face_with_spiral_eyes:
 
+Lets take the following imaginary genealogy graph (I simplified it):
 
+{{ img(src="big-example-1.png" alt="big-example-1.png")}}
+
+We want to expand ancestors of the orange node.
+Where should we place them? How many ancestors should we add?
+Let's see possible options:
+
+{{ img(src="big-example-expanding-options.png" alt="big-example-expanding-options.png")}}
+
+Different options allow us to expand different number of generations back.
+For example, option 1 allows us to add ancestors from only one generation back of the orange person.
+But options 2 and 3 allows to add ancestors from two generations back of the orange node.
+The Grafily plugin always select an option which allows to expand the biggest number of generations.
+
+Internally, that options are called paths.
+A path is a _way_ between graph nodes through layers where we can insert nodes and be sure that we will not cause edges crossing.
+The Grafily plugin calculates all possible paths and selects the longest one.
+
+Thus, on the example above, the grafily will chose the second or third path.
+After that, the plugin will add orange node parents and other direct ancestors.
+It always tries to add as much ancestors as it can.
+Practice confirmed that this simple heuristic approach is very convenient.
+
+Let's take another example:
+
+{{ img(src="big-example-inf.png" alt="big-example-inf.png")}}
+
+In the example above, the Grafily plugin will always chose the second path, because its length is ∞ (inf).
+We can add as many ancestors as we have (no limit).
+
+Want to know the best part about this approach?
+It forks perfectly for ancestors and as well for descendants!
+I wrote a generic implementation, so the same code works for expanding parent nodes and also children nodes too:
+
+* Longest path: [github/TheBestTvarynka/grafily/b8dc4e9331/src/layout/builder/index.ts#L197](https://github.com/TheBestTvarynka/grafily/blob/b8dc4e93316f8b8bb2b51b9bf702634dc86b2936/src/layout/builder/index.ts#L197).
+* Adding nodes by path: [github/TheBestTvarynka/grafily/b8dc4e9331/src/layout/builder/index.ts#L452](https://github.com/TheBestTvarynka/grafily/blob/b8dc4e93316f8b8bb2b51b9bf702634dc86b2936/src/layout/builder/index.ts#L452).
 
 ## Nodes rearrangement
 
