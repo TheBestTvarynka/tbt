@@ -11,7 +11,7 @@ tags = ["algorithms", "data-structures", "typescript", "drawing-genealogy-graphs
 [extra]
 keywords = "Algorithm, Graphs, Data structures, Algorithms, Depth-first search, Graph building"
 toc = true
-# thumbnail = "dgg1-thumbnail.png"
+thumbnail = "dgg1-thumbnail.png"
 +++
 
 # Intro
