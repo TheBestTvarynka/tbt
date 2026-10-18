@@ -86,7 +86,7 @@ It uses depth-first search: it starts at the topmost rightmost node of the left 
 Pay attention to the numbers inside sibling units.
 These numbers show the order of `x` coordinate calculation for the sibling unit.
 At the moment when we calculate the parameters of unit 4, we already know the parameters of unit 3 and unit 2.
-When it calculates the parameters of unit 20, it already knows the parameters of units 16 and 19.
+When calculating the parameters of unit 20, it already knows the parameters of units 16 and 19.
 
 Note that in the left half it visits the rightmost nodes first (right to left), and in the right half it visits the leftmost nodes first (left to right).
 
