@@ -129,9 +129,28 @@ It looked like a right call.
 I decided to try it.
 
 I am not going to explain in details how it work.
-Overall, it works in three stages:
+There are two great sources you can read to understand it:
 
-// todo
+* [Fast and Simple Horizontal Coordinate Assignment](https://scispace.com/pdf/fast-and-simple-horizontal-coordinate-assignment-2aawem94ts.pdf) paper.
+* [Erratum: Fast and Simple Horizontal Coordinate Assignment](https://arxiv.org/pdf/2008.01252) paper.
+  It described an improved version of the BK algorithm.
+
+In short, the BK algorithm created a vertical alignment for nodes (blocks) from top to bottom or bottom to top, then group them into polygons (classes) from left to right or right to left (horizontal compaction).
+Classes do not touch and have a defined minimal space between them.
+For example, below is an image from the paper that illustrates top to bottom vertical alignment and right to left horizontal compaction (image below is taken from the paper):
+
+{{ img(src="va-hc.png" class="ci b1")}}
+
+Graph edges are omitted.
+Arrows on the image above show a traversing order for the each class.
+
+You run the vertical alignment and horizontal compaction steps 4 times (every time you change the direction), calculate an average `x` coordinate for each node, and then produce the final result.
+In reality, you will calculate an average for each node based on previously obtained four layouts (image below is also taken from the paper):
+
+{{ img(src="4-cycles-of-bk.png" class="ci b1")}}
+
+I hope I fed your curiosity :sweat_smile:.
+To understand the algorithm completely you definitely need to carefully read papers.
 
 I did not want to implement it from scratch.
 I decided to look up for open-source implementation.
