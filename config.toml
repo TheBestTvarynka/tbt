@@ -68,7 +68,7 @@ menu_footer = [
 
 toc = true
 recent = true
-recent_items = 5
+recent_items = 8
 series = false
 series_items = 9 # Max number of items to display in series list, use 0 to disable
 #Series_parts = "$NUMBER_OF_PARTS part Series"
