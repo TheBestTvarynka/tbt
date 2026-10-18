@@ -58,7 +58,7 @@ The Reingold-Tilford algorithm works because of two things:
 
 * The Reingold-Tilford Algorithm uses a depth-first tree traversal.
   It means that when we calculate node `preX`, `mod`, and `shift` values, these values are already calculated for all child nodes.
-* The nodes traversal order it fixed.
+* The nodes traversal order is fixed.
   When we calculate the node `x` coordinate, all child nodes and all nodes to the left from the current node are already centered and we can calculate the current node properties (`preX`, `mod`, and `shift`).
 
 Overall, I could reuse `preX`, `mod`, and `shift` parameters and apply then to a graph.
@@ -91,12 +91,14 @@ When it calculates parameters of unit 20, it already knows parameters of units 1
 Pay attention that in the left half it visits rightmost nodes first (from right to left), and in the right half it visits leftmost nodes first (from left to right).
 
 That way I guaranteed depth-first traversal and unambiguous way to walk through the graph.
-Every unit knows parameters of units to the top of it and to the left or right from it.
+**Every unit knows parameters of units to the top of it and to the left or right from it.**
 
 So, what's the problem?
 Why did I discard this approach?
 
-> Every unit knows parameters of units to the top of it and to the left or right from it.
+{% note_info_block() %}
+_**Every unit knows parameters of units to the top of it and to the left or right from it.**_
+{% end %}
 
 This is a problem.
 In reality, genealogy graphs are way more complex.
@@ -104,21 +106,107 @@ For example, the described approach does not allow to unambiguously traverse gra
 Bleh, it sounds complex :face_with_spiral_eyes: :woozy_face:.
 It's much easier to show on example:
 
-// todo
+{{ img(src="impossible-case.png" class="ci b1")}}
 
+In order to find coordinates for orange nodes, I algorithm needs to know coordinated for red solid nodes.
+But red solid nodes coordinates will be calculated only when the algorithm will enter the red dashed nodes.
+But the algorithm cannot enter red dashed nodes until it finishes with orange ones.
+We have a contradiction here: one node depends on another and another node depends on the one node.
+There is not way to resolve this unambiguously :face_with_spiral_eyes:.
+
+Overall, I can crate a special version of depth-first search especially for that case, but it will not work for any kind of graphs.
 So, I wrapped up this approach and started searching for another one.
 
 # Brandes-Köpf
 
+Fast enough I found the Brandes-Köpf algorithm.
+It was introduced in [Fast and Simple Horizontal Coordinate Assignment](https://scispace.com/pdf/fast-and-simple-horizontal-coordinate-assignment-2aawem94ts.pdf) paper.
+It says _simle_ but do not trust it.
+My experience says that there is no easy papers to read :upside_down_face:.
 
+I spent a few evenings exploring it.
+It looked like a right call.
+I decided to try it.
+
+I am not going to explain in details how it work.
+Overall, it works in three stages:
+
+// todo
+
+I did not want to implement it from scratch.
+I decided to look up for open-source implementation.
+I did not find a generic enough implementation that would suit my needs.
+But I found vey good open-source implementation of the Brandes-Köpf algorithm inside the [dagree](https://github.com/dagrejs/dagre) project: [github/dagrejs/dagre/2595d05a0f/lib/position/bk.js](https://github.com/dagrejs/dagre/blob/2595d05a0fbb7721f35bfcaab5fbf40f5b3858ca/lib/position/bk.js).
+Back then I took that algorithm, rewrote it to TypeScript, and adapted to my case.
+Soon after, the dagree project also rewrote it to TS.
+But I decided to keep my implementation because it was already adapted and worked well.
+
+I loaded a few tests and it looked like a right call.
+I was pleased by the result:
+
+{{ img(src="bk-example.png" class="ci b1")}}
+
+Since there is a third option, you may already guessed that this is not enough.
+And you are right.
+In some cases, the Brandes-Köpf approach produces very poor layouts.
+Just look:
+
+{{ img(src="bad-bk.png" class="ci b1")}}
+
+You can clearly see a vertical alignment and when it does not work well.
+That extra space between sibling nodes is caused by nodes belonging to different classes (horizontal compaction step in Brandes-Köpf algorithm).
+At first, I thought that this is a rare case and I eventually will get used to it.
+Unfortunately, I saw it too often and did not get used to it.
+So, I decided to look for an alternate approach.
 
 # Quadratic programming
 
-.
+I spent many hours trying to adapt algorithm I knew.
+I took many tries to find an existing one.
+Eventually, I gave up and decided to go _all-vibe_.
+
+LLM has suggested me many possible approached to improve the layout calculation.
+There were Quadratic Programming (QP), physic simulation (edges are rubbers and pull nodes), etc.
+The QP was the easiest one to start with.
+Under the _easiest_ term I mean the less code to generate and integrate into the existing system.
+Physic simulation also looks like a overkill for such a small problem.
+
+{% note_info_block() %}
+**Quadratic programming (QP)** is the process of solving certain mathematical optimization problems involving quadratic functions.
+Specifically, one seeks to optimize (minimize or maximize) a multivariate quadratic function subject to linear constraints on the variables.
+
+[wikipedia/Quadratic_programming](https://en.wikipedia.org/wiki/Quadratic_programming)
+{% end %}
+
+In general terms, there is a certain function (math equation) that defined the layout (edges lengths or node's x coordinate relative to other nodes).
+And the unified solver tried to solve that equation.
+I know nothing about QP and I want all in with vibe-coding.
+
+First, I built a test playgroung for testing graph node-positioning algorithms: [github/TheBestTvarynka/graph-layout-playground](https://github.com/TheBestTvarynka/graph-layout-playground).
+It was inconvenient to experiment in grafily repo because I wanted an easy way to inject a test graph and see its layout.
+Then, I comprehensively described all my requirements for the desired graph layout and nodes positions.
+Then I added 3 to 4 test graphs of different complexity and structure.
+And finally asked the Claude Code (CC) to implement a QP-based layout algorithm.
+
+Honestly, it did a great job and I liked it a lot.
+The resulting graph layout looks better than all my previous tries almost from the first try.
+I added more test and and more instructions.
+CC has improved the code and I finally was satisfied with the result.
+
+Of course, the final layout algorithm is not perfect either.
+There is no _perfect_ positioning algorithm at all.
+The current one is _good enough_ for 95% of cases.
+For the rest 5% I recommend using the Brandes-Köpf algorithm.
+
+// todo: examples
 
 # Outro
 
-.
+At the moment, I am fully satisfied with the Grafily graph rendering.
+Using Brandes-Köpf and Quadratic algorithms I can get a readable and pretty graph.
+
+The Grafily plugin keeps and will keep both Brandes-Köpf and Quadratic algorithms.
+The user can switch between them in any time.
 
 # References
 
