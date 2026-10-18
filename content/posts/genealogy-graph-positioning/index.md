@@ -11,7 +11,7 @@ tags = ["algorithms", "data-structures", "typescript", "drawing-genealogy-graphs
 [extra]
 keywords = "Algorithm, Graphs, Data structures, Algorithms, Nodes positioning"
 toc = true
-# thumbnail = "dgg2-thumbnail.png"
+thumbnail = "dgg3-thumbnail.png"
 +++
 
 # Intro
@@ -232,7 +232,7 @@ When the graph starts looking more like a simple tree, the BK algorithm will be 
 # Outro
 
 At the moment, I am fully satisfied with the Grafily graph rendering.
-Using Brandes-Köpf and Quadratic algorithms I can get a readable and pretty graph.
+Using Brandes-Köpf and Quadratic algorithms I can get a readable and pretty graphs.
 
 The Grafily plugin keeps and will keep both Brandes-Köpf and Quadratic algorithms.
 The user can switch between them in any time.
