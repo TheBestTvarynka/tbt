@@ -198,7 +198,17 @@ There is no _perfect_ positioning algorithm at all.
 The current one is _good enough_ for 95% of cases.
 For the rest 5% I recommend using the Brandes-Köpf algorithm.
 
-// todo: examples
+| QP | BK|
+|-|-|
+| {{ img(src="qp-big-example.png" class="ci b1")}} | {{ img(src="bk-example.png" class="ci b1")}} |
+
+From comparison above you can see that QP-based approach produces more compact and more pretty graph layouts.
+As I said above, the QP-based algorithm work better in 95% cases (from my experience).
+When the graph starts looking more like a simple tree, the BK algorithm will be better:
+
+| QP | BK|
+|-|-|
+| {{ img(src="q3.png" class="ci b1")}} | {{ img(src="bk3.png" class="ci b1")}} |
 
 # Outro
 
